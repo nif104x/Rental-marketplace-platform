@@ -1,23 +1,38 @@
-import psycopg2
-from psycopg2.extras import RealDictCursor
-import time
-# Connecting Database
-while True:
-    try:
-        conn = psycopg2.connect(host='localhost', database='rental', user='postgres', password='1234', cursor_factory=RealDictCursor)
-        cursor = conn.cursor()
-        print('Successfully connected database')
-        break
-    except Exception as error:
-        print('Database connection Failed!!!!!!!')
-        print("Error:", error)
-        time.sleep(2)
+import os
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-def homePage():
-    cursor.execute(
-        """
-        select * from user_main
-        """
-    )
-    data = cursor.fetchall()
-    return {"Hello": data}
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set.")
+
+
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_recycle=300, 
+    pool_size=10,
+    max_overflow=20
+)
+
+# Session factory
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Base class for SQLAlchemy models
+Base = declarative_base()
+
+
+def get_db():
+    """
+    FastAPI dependency that provides a database session per request 
+    and ensures it is closed when the request finishes.
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
