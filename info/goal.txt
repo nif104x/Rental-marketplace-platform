@@ -1,0 +1,85 @@
+# P2P Rental Marketplace - Page Structure & Features
+
+echo "=========================================="
+echo " 1. PUBLIC & AUTH PAGES"
+echo "=========================================="
+
+# PAGE: /login_register
+# INFO: Email, Password, Role toggle, MFA status
+# FUNC: Authenticate, Create account, Password reset
+
+# PAGE: /browse (Search Results)
+# INFO: Item cards, Map view, Prices, Star ratings
+# FUNC: Filter (category, dates, price), Sort, Semantic search
+
+# PAGE: /listing/{id} (Item Detail)
+# INFO: Image gallery, Description, Rates (hr/day/wk), Rules, Lessor bio, Reviews
+# FUNC: Date picker, "Book Now", "Save to Wishlist", "Message Lessor", Report listing
+
+echo "=========================================="
+echo " 2. USER DASHBOARD (Lessee / Lessor)"
+echo "=========================================="
+
+# PAGE: /dashboard
+# INFO: Active rentals, Pending requests, Unread messages, Notification feed
+# FUNC: Role toggle (Switch between Owner/Renter views)
+
+# PAGE: /profile
+# INFO: Bio, Contact details, Verification status, Account status, Received reviews
+# FUNC: Edit profile, Upload KYC/ID, Update location preferences
+
+# PAGE: /my_listings (Lessor Only)
+# INFO: Owned items, Status (Active/Archived), Performance stats
+# FUNC: CRUD listings, Upload images, Manage seasonal JSON pricing, Block calendar dates
+
+# PAGE: /wishlist
+# INFO: Saved items grid
+# FUNC: Remove item, Quick-book
+
+echo "=========================================="
+echo " 3. BOOKING & PAYMENT PAGES"
+echo "=========================================="
+
+# PAGE: /checkout/{listing_id}
+# INFO: Date summary, Cost breakdown (rental + deposit + service fee)
+# FUNC: Submit payment, Hold funds in Escrow
+
+# PAGE: /my_bookings
+# INFO: Booking status (Pending/Active/Completed/Cancelled), Timestamps
+# FUNC: Cancel, Verify item condition (hand-off/return), Leave 1-5 star review
+
+# PAGE: /wallet (Financials)
+# INFO: Payment history, Escrowed funds, Disbursed earnings, Refunded deposits
+# FUNC: Download receipts, Request payout
+
+echo "=========================================="
+echo " 4. MESSAGING PAGES"
+echo "=========================================="
+
+# PAGE: /inbox
+# INFO: Active conversations, Linked listing/booking context, Last message timestamp
+# FUNC: Filter unread, Search chats
+
+# PAGE: /inbox/{conversation_id}
+# INFO: Chat history, Sender ID, Read/Unread status
+# FUNC: Send text, Auto-scroll, Real-time refresh
+
+echo "=========================================="
+echo " 5. ADMIN PAGES"
+echo "=========================================="
+
+# PAGE: /admin/dashboard
+# INFO: Platform metrics (active users, total escrows, pending verifications)
+# FUNC: Quick stats overview
+
+# PAGE: /admin/users
+# INFO: User table, Roles, Account status
+# FUNC: Approve verifications, Suspend/Ban users
+
+# PAGE: /admin/reports
+# INFO: Flag reason (Fraud/Damage), Reporter ID, Reported entity ID
+# FUNC: Admin resolution workflow, Delete abusive listings/reviews
+
+echo "Execution Complete. UI/UX routing structure outlined."
+
+```
