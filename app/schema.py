@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, EmailStr
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from decimal import Decimal
@@ -7,9 +7,7 @@ from decimal import Decimal
 # USER SCHEMAS
 # ==========================================
 class UserBase(BaseModel):
-    role: str
-    contact_details: str # E.g., email or phone
-    mfa_enabled: Optional[bool] = False
+    contact_details: str
     personal_bio: Optional[str] = None
     location_preferences: Optional[str] = None
 
@@ -17,12 +15,15 @@ class UserCreate(UserBase):
     password: str = Field(..., description="Raw password to be hashed in backend")
 
 class UserResponse(UserBase):
-    user_id: int
+    user_id: str
     verification_status: str
     account_status: str
 
     model_config = ConfigDict(from_attributes=True)
 
+class userlogin(BaseModel):
+    email: str
+    password: str
 # ==========================================
 # LISTING & IMAGE SCHEMAS
 # ==========================================
@@ -30,9 +31,13 @@ class ImageBase(BaseModel):
     image_file_url: str
     is_primary_preview: Optional[bool] = False
 
+class ImageCreate(ImageBase):
+    pass
+
 class ImageResponse(ImageBase):
-    image_id: int
-    listing_id: int
+    image_id: str
+    listing_id: str
+
     model_config = ConfigDict(from_attributes=True)
 
 class ListingBase(BaseModel):
@@ -50,13 +55,13 @@ class ListingBase(BaseModel):
     keywords_semantic_tags: Optional[List[str]] = None
 
 class ListingCreate(ListingBase):
-    pass # lessor_id will be extracted from current logged-in user
+    pass
 
 class ListingResponse(ListingBase):
-    listing_id: int
-    lessor_id: int
+    listing_id: str
+    lessor_id: str
     status: str
-    images: List[ImageResponse] = [] # Includes nested images
+    images: List[ImageResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -71,12 +76,12 @@ class BookingBase(BaseModel):
     service_fee: Optional[Decimal] = 0.00
 
 class BookingCreate(BookingBase):
-    listing_id: int
+    listing_id: str
 
 class BookingResponse(BookingBase):
-    booking_id: int
-    listing_id: int
-    lessee_id: int
+    booking_id: str
+    listing_id: str
+    lessee_id: str
     booking_status: str
     lessor_condition_verified: bool
     lessee_condition_verified: bool
@@ -84,21 +89,23 @@ class BookingResponse(BookingBase):
     model_config = ConfigDict(from_attributes=True)
 
 class PaymentResponse(BaseModel):
-    payment_id: int
-    booking_id: int
+    payment_id: str
+    booking_id: str
     payment_status: str
+
     model_config = ConfigDict(from_attributes=True)
 
 # ==========================================
 # WISHLIST SCHEMAS
 # ==========================================
 class WishlistCreate(BaseModel):
-    listing_id: int
+    listing_id: str
 
 class WishlistResponse(BaseModel):
-    wishlist_id: int
-    user_id: int
-    listing_id: int
+    wishlist_id: str
+    user_id: str
+    listing_id: str
+
     model_config = ConfigDict(from_attributes=True)
 
 # ==========================================
@@ -111,45 +118,61 @@ class MessageCreate(MessageBase):
     pass
 
 class MessageResponse(MessageBase):
-    message_id: int
-    conversation_id: int
-    sender_id: int
+    message_id: str
+    conversation_id: str
+    sender_id: str
     is_read: bool
     timestamp: datetime
+
     model_config = ConfigDict(from_attributes=True)
 
 class ConversationResponse(BaseModel):
-    conversation_id: int
-    listing_id: int
-    booking_id: Optional[int] = None
-    lessor_id: int
-    lessee_id: int
+    conversation_id: str
+    listing_id: str
+    booking_id: Optional[str] = None
+    lessor_id: str
+    lessee_id: str
     created_at: datetime
     last_message_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+# ==========================================
+# NOTIFICATION SCHEMAS
+# ==========================================
+class NotificationResponse(BaseModel):
+    notification_id: str
+    user_id: str
+    delivery_method: str
+    type: str
+    created_at: datetime
+
     model_config = ConfigDict(from_attributes=True)
 
 # ==========================================
 # REVIEW & REPORT SCHEMAS
 # ==========================================
 class ReviewCreate(BaseModel):
-    target_user_id: Optional[int] = None
-    target_listing_id: Optional[int] = None
+    target_user_id: Optional[str] = None
+    target_listing_id: Optional[str] = None
     rating_score: Decimal = Field(..., ge=0, le=5)
     qualitative_review: Optional[str] = None
 
 class ReviewResponse(ReviewCreate):
-    review_id: int
-    reviewer_id: int
+    review_id: str
+    reviewer_id: str
     created_at: datetime
+
     model_config = ConfigDict(from_attributes=True)
 
 class ReportCreate(BaseModel):
-    reported_entity_id: int
+    reported_entity_id: str
     flag_reason: str
 
 class ReportResponse(ReportCreate):
-    report_id: int
-    reporter_id: int
+    report_id: str
+    reporter_id: str
     admin_resolution: str
     created_at: datetime
+
     model_config = ConfigDict(from_attributes=True)

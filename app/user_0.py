@@ -91,7 +91,7 @@
 # ):
 #     listing_id = f"LIST-{uuid.uuid4().hex[:6].upper()}"
 #     new_gig = models.ServiceListing(
-#         id=listing_id,
+#         id=listing_id,que
 #         org_id=current_user.org_id,
 #         title = form.title,
 #         category=form.category,
