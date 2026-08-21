@@ -6,8 +6,10 @@ from app import model
 from app import auth
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
+from decimal import Decimal
 import uuid
 import shutil
+import math
 
 router = APIRouter(prefix="/user", tags=["User"])
 
@@ -51,6 +53,11 @@ def login(data:schema.userlogin, db=Depends(get_db)):
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
+
+# if current user id needed by tutul-ruhi-lamia
+@router.get("/me")
+def me(current_user: model.User = Depends(auth.get_current_user)):
+    return current_user.user_id
 
 @router.post("/createListing")
 def creategig(data:schema.ListingCreate, current_user: model.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
@@ -100,6 +107,9 @@ def upload_image(lst_id: str = Form(...), image:UploadFile = File(...), db: Sess
     return {
         "message": "Image uploaded successfully",
     }
+
+# tutul eikhan e age listing save korle listing id paiba oita deya pore image save koiro. 
+# ekloge er logic ta vaiba paitasilam na. me noob :,)
 
 @router.patch("/editlisting/{listing_id}")
 def editListing(listing_id: str, data: schema.ListingUpdate, current_user: model.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
@@ -151,42 +161,150 @@ def deleteListing(
     }
 
 #### work on booking after prayer
+def is_available(listing_id: str, start_period, end_period, db: Session):
 
-
-router.post("/booking/{listing_id}")
-def create_booking(
-        listing_id : str,
-        data:schema.BookingCreate,
-        current_user: model.User = Depends(auth.get_current_user),
-        db: Session = Depends(get_db)
-):
-
-    lst = db.query(model.Listing).filter(model.Listing.listing_id == listing_id).first()
-
-    booking_id = f"BK-{uuid.uuid4().hex[:6].upper()}"
-    lessee_id = current_user.user_id
-    duration = data.end_period - data.start_period
-    total_hours = duration.total_seconds() / 3600
-    days = int(total_hours // 24)
-    hours = total_hours % 24
-    rental_cost = (lst.rental_rate_daily*days)+(lst.rental_rate_hourly*hours)+ lst.security_deposit + data.service_fee
-
-    bk = model.Booking(
-        booking_id = booking_id,
-        listind_id = listing_id,
-        lessee_id = lessee_id,
-        start_period = data.start_period,
-        end_period = data.end_period,
-        rental_cost = rental_cost,
-        deposit_held = lst.security_deposit
-    )
-
-def is_available(listing_id, start_period, end_period, db):
     conflict = db.query(model.Booking).filter(
         model.Booking.listing_id == listing_id,
-        model.Booking.status == "accepted",
+        model.Booking.booking_status.in_(["Active", "Pending"]),
         model.Booking.start_period < end_period,
         model.Booking.end_period > start_period
     ).first()
 
     return conflict is None
+
+
+@router.post("/booking/{listing_id}")
+def create_booking(
+    listing_id: str,
+    data: schema.BookingCreate,
+    current_user: model.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    lst = db.query(model.Listing).filter(model.Listing.listing_id == listing_id).first()
+    if not lst:
+        raise HTTPException(status_code=404, detail="Listing not found")
+
+    if lst.lessor_id == current_user.user_id:
+        raise HTTPException(status_code=400, detail="You cannot book your own listing")
+
+    if data.start_period >= data.end_period:
+        raise HTTPException(status_code=400, detail="End period must be after start period")
+
+    if not is_available(listing_id, data.start_period, data.end_period, db):
+        raise HTTPException(status_code=409, detail="Selected dates are already booked")
+
+
+    duration = data.end_period - data.start_period
+    total_hours = duration.total_seconds() / 3600
+    days = int(total_hours // 24)
+    hours = math.ceil(total_hours % 24)
+
+
+    rate_daily = lst.rental_rate_daily or Decimal("0.00")
+    rate_hourly = lst.rental_rate_hourly or Decimal("0.00")
+    deposit = lst.security_deposit or Decimal("0.00")
+    service_fee = getattr(data, "service_fee", Decimal("0.00")) or Decimal("0.00")
+
+    rental_cost = (rate_daily * days) + (rate_hourly * Decimal(str(hours)))
+
+    booking_id = f"BK-{uuid.uuid4().hex[:6].upper()}"
+    bk = model.Booking(
+        booking_id = booking_id,
+        listing_id = listing_id,
+        lessee_id = current_user.user_id,
+        start_period = data.start_period,
+        end_period = data.end_period,
+        rental_cost = rental_cost,
+        deposit_held = deposit,
+        service_fee = service_fee,
+        booking_status = "Pending"
+    )
+
+    conv_id = f"CONV-{uuid.uuid4().hex[:6].upper()}"
+    conv = model.Conversation(
+        conversation_id=conv_id,
+        listing_id=listing_id,
+        booking_id=booking_id,
+        lessor_id=lst.lessor_id,
+        lessee_id=current_user.user_id
+    )
+
+    db.add(bk)
+    db.add(conv)
+    db.commit()
+    db.refresh(bk)
+    db.refresh(conv)
+
+    return {
+        "message": "Booked successfully",
+        "booking_id": bk.booking_id,
+        "rental_cost": bk.rental_cost,
+        "deposit_held": bk.deposit_held,
+        "conversation_id": conv_id
+    }
+
+# working on conversationa and messages
+@router.post("/conversations/{conversation_id}/messages")
+def send_message(
+    conversation_id: str,
+    data: schema.MessageCreate,
+    current_user: model.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    conv = db.query(model.Conversation).filter(model.Conversation.conversation_id == conversation_id).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    if current_user.user_id not in [conv.lessor_id, conv.lessee_id]:
+        raise HTTPException(status_code=403, detail="Not authorized to send messages in this conversation")
+
+    msg_id = f"MSG-{uuid.uuid4().hex[:6].upper()}"
+    msg = model.Message(
+        message_id=msg_id,
+        conversation_id=conversation_id,
+        sender_id=current_user.user_id,
+        content=data.content,
+        is_read=False
+    )
+
+    conv.last_message_at = datetime.now(timezone.utc)
+
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+
+    return {
+        "message": "Message sent successfully",
+        "message_id": msg.message_id,
+        "timestamp": msg.timestamp
+    }
+
+@router.get("/conversations/{conversation_id}/messages")
+def get_messages(
+    conversation_id: str,
+    current_user: model.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    conv = db.query(model.Conversation).filter(model.Conversation.conversation_id == conversation_id).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    if current_user.user_id not in [conv.lessor_id, conv.lessee_id]:
+        raise HTTPException(status_code=403, detail="Not authorized to view these messages")
+
+    db.query(model.Message).filter(
+        model.Message.conversation_id == conversation_id,
+        model.Message.sender_id != current_user.user_id,
+        model.Message.is_read == False
+    ).update({"is_read": True})
+    db.commit()
+
+    messages = db.query(model.Message).filter(
+        model.Message.conversation_id == conversation_id
+    ).order_by(model.Message.timestamp.asc()).all()
+
+    return messages # tutul tomar current user id lagle /me endpoint call korba
+
+
+
