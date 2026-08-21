@@ -62,7 +62,7 @@ class Image(Base):
     is_primary_preview = Column(Boolean, default=False)
 
     listing = relationship("Listing", back_populates="images")
-
+ 
 
 class Booking(Base):
     __tablename__ = 'bookings'

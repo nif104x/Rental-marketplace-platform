@@ -65,6 +65,21 @@ class ListingResponse(ListingBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+class ListingUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    rental_rate_hourly: Optional[Decimal] = None
+    rental_rate_daily: Optional[Decimal] = None
+    rental_rate_weekly: Optional[Decimal] = None
+    seasonal_pricing_tiers: Optional[List[Dict[str, Any]]] = None
+    security_deposit: Optional[Decimal] = None
+    item_rules: Optional[str] = None
+    availability_schedules: Optional[Dict[str, Any]] = None
+    geo_location: Optional[str] = None
+    keywords_semantic_tags: Optional[List[str]] = None
+    status: Optional[str] = None
+
 # ==========================================
 # BOOKING & PAYMENT SCHEMAS
 # ==========================================
@@ -73,7 +88,7 @@ class BookingBase(BaseModel):
     end_period: datetime
     rental_cost: Decimal
     deposit_held: Optional[Decimal] = 0.00
-    service_fee: Optional[Decimal] = 0.00
+    service_fee: Optional[Decimal] = 50.00
 
 class BookingCreate(BookingBase):
     listing_id: str
