@@ -416,3 +416,31 @@ def admin_ui_set_user_status(
         db.commit()
     safe_tab = tab if tab in {"listings", "orders", "users"} else "users"
     return RedirectResponse(url=f"/admin/ui?tab={safe_tab}", status_code=303)
+
+
+
+
+
+# @router.patch("/admin/reports/{report_id}")
+# def resolve_report(
+#     report_id: str,
+#     resolution: str,
+#     current_user: model.User = Depends(auth.get_current_user),
+#     db: Session = Depends(get_db)
+# ):
+#     if current_user.role != "Administrator":
+#         raise HTTPException(status_code=403, detail="Admin access required")
+
+#     report = db.query(model.Report).filter(model.Report.report_id == report_id).first()
+#     if not report:
+#         raise HTTPException(status_code=404, detail="Report not found")
+
+#     report.admin_resolution = resolution
+#     db.commit()
+#     db.refresh(report)
+
+#     return {
+#         "message": "Report resolved successfully",
+#         "report_id": report.report_id,
+#         "admin_resolution": report.admin_resolution
+#     }

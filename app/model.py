@@ -5,6 +5,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from sqlalchemy.orm import relationship
+from sqlalchemy import Float
 from app.db import Base
 
 def generate_uuid():
@@ -22,6 +23,9 @@ class User(Base):
     verification_status = Column(String(50), default='Pending')
     location_preferences = Column(Text, nullable=True)
     account_status = Column(String(50), default='Active')
+    name = Column(String(100))
+    email = Column(String(255), unique=True)
+    revenue = Column(Float, default=0.0)
 
     listings = relationship("Listing", back_populates="lessor", cascade="all, delete-orphan")
     bookings = relationship("Booking", back_populates="lessee")

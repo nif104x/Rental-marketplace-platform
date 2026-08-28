@@ -8,7 +8,8 @@ from decimal import Decimal
 # ==========================================
 class UserBase(BaseModel):
     contact_details: str
-    personal_bio: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
     location_preferences: Optional[str] = None
 
 class UserCreate(UserBase):
@@ -88,7 +89,7 @@ class BookingBase(BaseModel):
     end_period: datetime
     rental_cost: Decimal
     deposit_held: Optional[Decimal] = 0.00
-    service_fee: Optional[Decimal] = 50.00
+    # service_fee: Optional[Decimal] = 50.00
 
 class BookingCreate(BookingBase):
     listing_id: str
@@ -191,3 +192,7 @@ class ReportResponse(ReportCreate):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class BookingQuoteRequest(BaseModel):
+    start_period: datetime
+    end_period: datetime
