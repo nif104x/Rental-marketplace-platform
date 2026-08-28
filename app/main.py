@@ -2,12 +2,12 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
 
-from app.routes import booking, conversation, listings, notification, report, review, search, user, wishlist
+from app.routes import admin, booking, conversation, listings, notification, report, review, search, user, wishlist
 from app.db import engine
 
 app = FastAPI()
 
-# app.include_router(admin.router)
+app.include_router(admin.router)
 app.include_router(booking.router)
 app.include_router(conversation.router)
 app.include_router(listings.router)

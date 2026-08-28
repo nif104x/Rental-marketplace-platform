@@ -35,7 +35,7 @@ def signup(data: schema.UserCreate, db=Depends(get_db)):
         db.refresh(user)
         return JSONResponse(status_code=201, content={"message": "User created successfully"})
 
-    
+
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -43,7 +43,7 @@ def signup(data: schema.UserCreate, db=Depends(get_db)):
 
 @router.post("/login")
 def login(data:schema.userlogin, db=Depends(get_db)):
-    user = db.query(model.User).filter(model.User.contact_details==data.email).first()
+    user = db.query(model.User).filter(model.User.email==data.email).first()
     if not user:
         raise HTTPException(status_code=404, detail=f"Invalid credential")
 

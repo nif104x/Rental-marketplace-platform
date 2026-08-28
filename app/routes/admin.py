@@ -1,446 +1,271 @@
-from dataclasses import dataclass
-from urllib.parse import quote
+from decimal import Decimal
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi.responses import JSONResponse
+from app.db import get_db
+from app import schema
+from app import model
+from app import auth
+from datetime import datetime, timedelta, timezone
+from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_, func
+from decimal import Decimal
+import uuid
+import shutil
+import math
+from typing import Optional
+from app.routes.notification import notify_user
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session, joinedload
+router = APIRouter(prefix="/admin", tags=["Admin Operations"])
 
-from app.admin.schemas import AdminSetUserStatusIn
-from app.paths import APP_DIR
-from app.database import get_db
-from app.organizer import ouath2 as organizer_oauth2
-from app.organizer import utils as organizer_utils
-from app.models import (
-    AdminInfo,
-    Event,
-    EventAddonSelection,
-    EventOrder,
-    OrganizerInfo,
-    ServiceListing,
-    UserMain,
-    UserStatus,
-)
-from app.tasks.services.reminders import send_customer_due_reminders
 
-router = APIRouter(prefix="/admin", tags=["admin"])
-templates = Jinja2Templates(directory=str(APP_DIR / "admin" / "templates"))
-
-def _set_no_store(resp) -> None:
-    """
-    Prevent browser caching (incl. bfcache heuristics) for admin pages.
-    This mitigates Back-button showing stale authenticated HTML after logout.
-    """
+@router.post("/signup")
+def signup(data: schema.UserCreate, db=Depends(get_db)):
+    user_id = f"U-{uuid.uuid4().hex[:6].upper()}"
+    user = model.User(
+        user_id=user_id,
+        role = "admin",
+        name=data.name,
+        email = data.email,
+        contact_details=data.contact_details, # use this as mobile no.
+        encrypted_credentials=data.password,
+        verification_status="n/a",
+        account_status="Active"
+    )
     try:
-        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-        resp.headers["Pragma"] = "no-cache"
-        resp.headers["Expires"] = "0"
-    except Exception:
-        pass
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return JSONResponse(status_code=201, content={"message": "User created successfully"})
+
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 
-@dataclass(frozen=True)
-class AdminSession:
-    user_id: str
-    username: str
-    source: str  # "hardcoded" | "db"
+@router.post("/login")
+def login(data:schema.userlogin, db=Depends(get_db)):
+    user = db.query(model.User).filter(model.User.email==data.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail=f"Invalid credential")
 
+    if user.encrypted_credentials!= data.password:
+        raise HTTPException(status_code=404, detail=f"Invalid credential")
 
-def _role_is_admin(role_val) -> bool:
-    role = str(role_val or "").strip()
-    return role == "Admin" or role.endswith(".Admin")
-
-
-def get_current_admin(request: Request, db: Session = Depends(get_db)) -> AdminSession:
-    """
-    Cookie-auth like organizer portal, but must resolve to an Admin profile.
-    Raises 401 (JSON routes); UI routes should catch and redirect.
-    """
-    token_cookie = request.cookies.get("access_token")
-    if not token_cookie or not token_cookie.startswith("Bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized")
-    token = token_cookie.split(" ", 1)[1].strip()
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    token_data = organizer_oauth2.verify_access_token(token, credentials_exception)
-
-
-    admin = (
-        db.query(AdminInfo)
-        .options(joinedload(AdminInfo.user))
-        .filter(AdminInfo.admin_id == token_data.id)
-        .first()
-    )
-    if admin is None or admin.user is None or not _role_is_admin(admin.user.role):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not an admin session")
-    return AdminSession(
-        user_id=str(admin.admin_id),
-        username=str(admin.user.username),
-        source="db",
+    access_token = auth.create_access_token(
+        data = {"user_id": user.user_id},
+        expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 
-
-def require_admin_ui(
-    request: Request, db: Session = Depends(get_db)
-) -> AdminSession | RedirectResponse:
-    try:
-        return get_current_admin(request=request, db=db)
-    except HTTPException:
-        nxt = quote(str(request.url), safe="")
-        return RedirectResponse(url=f"/admin/login?next={nxt}", status_code=303)
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.get("/login", response_class=HTMLResponse, include_in_schema=False)
-def admin_login_page(request: Request, next: str | None = None):
-    resp = templates.TemplateResponse(
-        request,
-        "admin/login.html",
-        {
-            "request": request,
-            "next": next or "/admin/ui",
-            "role_badge": "Admin",
-            "nav_active": "admin",
-        },
-    )
-    _set_no_store(resp)
-    return resp
-
-
-@router.post("/login", include_in_schema=False)
-def admin_login_post(
-    request: Request,
-    username: str = Form(...),
-    password: str = Form(...),
-    next: str | None = Form(default=None),
-    db: Session = Depends(get_db),
-):
-    uname = (username or "").strip()
-    pwd = (password or "").strip()
-
-    user = db.query(UserMain).filter(UserMain.username == uname).first()
-    if user is None or not organizer_utils.password_matches_stored(pwd, user.password):
-        # Keep message generic: don't leak whether username exists.
-        raise HTTPException(status_code=404, detail="Invalid credential")
-    if not _role_is_admin(user.role):
-        raise HTTPException(status_code=403, detail="Not an admin account")
-    admin = db.query(AdminInfo).filter(AdminInfo.admin_id == user.id).first()
-    if admin is None:
-        raise HTTPException(status_code=403, detail="Admin profile missing")
-
-    access_token = organizer_oauth2.create_access_token(
-        data={"user_id": user.id},
-        expires_delta=None,
-    )
-    redirect_to = (next or "/admin/ui").strip() or "/admin/ui"
-    resp = RedirectResponse(url=redirect_to, status_code=303)
-    resp.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True, path="/")
-    _set_no_store(resp)
-    return resp
-
-
-@router.post("/logout", include_in_schema=False)
-def admin_logout(next: str | None = Form(default=None)):
-    resp = RedirectResponse(url=(next or "/admin/login").strip() or "/admin/login", status_code=303)
-    resp.delete_cookie(key="access_token", path="/")
-    _set_no_store(resp)
-    return resp
-
-
-def _admin_ui_data(db: Session):
-    listings = (
-        db.query(ServiceListing, OrganizerInfo.company_name)
-        .outerjoin(OrganizerInfo, ServiceListing.org_id == OrganizerInfo.org_id)
-        .order_by(ServiceListing.id)
-        .all()
-    )
-
-    orders = (
-        db.query(EventOrder)
-        .options(
-            joinedload(EventOrder.event).joinedload(Event.customer),
-            joinedload(EventOrder.event).joinedload(Event.organizer),
-            joinedload(EventOrder.listing),
-            joinedload(EventOrder.selections).joinedload(EventAddonSelection.addon),
+def require_admin(current_user: model.User = Depends(auth.get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator access required"
         )
-        .order_by(EventOrder.id)
-        .all()
-    )
-
-    users = (
-        db.query(UserMain, UserStatus)
-        .outerjoin(UserStatus, UserMain.id == UserStatus.user_id)
-        .order_by(UserMain.id)
-        .all()
-    )
-
-    return listings, orders, users
+    return current_user
 
 
-@router.get("/listings")
-def listings(
-    db: Session = Depends(get_db),
-    _: AdminSession = Depends(get_current_admin),
+@router.get("/dashboard/stats")
+def get_dashboard_stats(
+    admin: model.User = Depends(require_admin),
+    db: Session = Depends(get_db)
 ):
-    rows = (
-        db.query(ServiceListing, OrganizerInfo.company_name)
-        .outerjoin(OrganizerInfo, ServiceListing.org_id == OrganizerInfo.org_id)
-        .order_by(ServiceListing.id)
-        .all()
-    )
-    out = []
-    for sl, company_name in rows:
-        out.append(
-            {
-                "id": sl.id,
-                "org_id": sl.org_id,
-                "company_name": company_name,
-                "category": sl.category,
-                "title": sl.title,
-                "base_price": float(sl.base_price),
-                "is_deleted": bool(sl.is_deleted) if sl.is_deleted is not None else False,
-            }
-        )
-    return out
+    total_users = db.query(func.count(model.User.user_id)).scalar() or 0
+    total_listings = db.query(func.count(model.Listing.listing_id)).scalar() or 0
+    active_bookings = db.query(func.count(model.Booking.booking_id)).filter(
+        model.Booking.booking_status == "Active"
+    ).scalar() or 0
+    pending_reports = db.query(func.count(model.Report.report_id)).filter(
+        model.Report.admin_resolution == "Pending"
+    ).scalar() or 0
 
+    total_fees_collected = db.query(func.sum(model.Booking.service_fee)).filter(
+        model.Booking.booking_status.in_(["Active", "Completed"])
+    ).scalar() or Decimal("0.00")
 
-@router.delete("/listings/{listing_id}")
-def delete_listing(
-    listing_id: str,
-    db: Session = Depends(get_db),
-    _: AdminSession = Depends(get_current_admin),
-):
-    listing = db.query(ServiceListing).filter(ServiceListing.id == listing_id).first()
-    if not listing:
-        raise HTTPException(status_code=404, detail="Listing not found")
-    listing.is_deleted = True
-    db.commit()
-    return {"message": "Listing deleted"}
-
-
-@router.get("/orders")
-def orders(
-    db: Session = Depends(get_db),
-    _: AdminSession = Depends(get_current_admin),
-):
-    base_rows = (
-        db.query(EventOrder)
-        .options(
-            joinedload(EventOrder.event).joinedload(Event.customer),
-            joinedload(EventOrder.event).joinedload(Event.organizer),
-            joinedload(EventOrder.listing),
-            joinedload(EventOrder.selections).joinedload(EventAddonSelection.addon),
-        )
-        .order_by(EventOrder.id)
-        .all()
-    )
-
-    out = []
-    for eo in base_rows:
-        ev = eo.event
-        sl = eo.listing
-        oi = ev.organizer if ev else None
-        ci = ev.customer if ev else None
-        addons = []
-        for sel in eo.selections or []:
-            ad = sel.addon
-            addons.append(
-                {
-                    "addon_id": sel.addon_id,
-                    "addon_name": ad.addon_name if ad else None,
-                    "unit_price": float(sel.unit_price),
-                }
-            )
-        addons_total = sum(a["unit_price"] for a in addons)
-        base_price = float(eo.base_price_at_booking)
-        out.append(
-            {
-                "order_id": eo.id,
-                "event_id": eo.event_id,
-                "listing_id": eo.listing_id,
-                "listing_title": sl.title if sl else None,
-                "org_id": ev.org_id if ev else None,
-                "organizer_name": oi.company_name if oi else None,
-                "customer_id": ev.customer_id if ev else None,
-                "customer_name": ci.full_name if ci else None,
-                "event_date": str(ev.event_date) if ev and ev.event_date else None,
-                "event_status": ev.status if ev else None,
-                "payment_status": eo.payment_status,
-                "base_price_at_booking": base_price,
-                "addons": addons,
-                "addons_total": addons_total,
-                "total_price_calculated": base_price + addons_total,
-            }
-        )
-    return out
+    return {
+        "total_users": total_users,
+        "total_listings": total_listings,
+        "active_bookings": active_bookings,
+        "pending_reports": pending_reports,
+        "total_service_revenue": total_fees_collected
+    }
 
 
 @router.get("/users")
-def users(
-    db: Session = Depends(get_db),
-    _: AdminSession = Depends(get_current_admin),
+def get_all_users(
+    role: Optional[str] = None,
+    status: Optional[str] = None,
+    admin: model.User = Depends(require_admin),
+    db: Session = Depends(get_db)
 ):
-    rows = (
-        db.query(UserMain, UserStatus)
-        .outerjoin(UserStatus, UserMain.id == UserStatus.user_id)
-        .order_by(UserMain.id)
-        .all()
-    )
+    query = db.query(model.User)
+    if role:
+        query = query.filter(model.User.role == role)
+    if status:
+        query = query.filter(model.User.account_status == status)
+
+    users = query.all()
     return [
         {
-            "id": u.id,
-            "username": u.username,
+            "user_id": u.user_id,
+            "contact_details": u.contact_details,
             "role": u.role,
-            "status": s.status if s else "Active",
+            "account_status": u.account_status,
+            "created_at": getattr(u, "created_at", None)
         }
-        for u, s in rows
+        for u in users
     ]
 
 
 @router.patch("/users/{user_id}/status")
-def set_status(
+def update_user_status(
     user_id: str,
-    body: AdminSetUserStatusIn,
-    db: Session = Depends(get_db),
-    _: AdminSession = Depends(get_current_admin),
+    new_status: str = Query(..., pattern="^(Active|Suspended|Banned)$"),
+    admin: model.User = Depends(require_admin),
+    db: Session = Depends(get_db)
 ):
-    user = db.query(UserMain).filter(UserMain.id == user_id).first()
+    user = db.query(model.User).filter(model.User.user_id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    row = db.query(UserStatus).filter(UserStatus.user_id == user_id).first()
-    if row:
-        row.status = body.status
-        row.reason = body.reason
-    else:
-        db.add(UserStatus(user_id=user_id, status=body.status, reason=body.reason))
+    if user.user_id == admin.user_id:
+        raise HTTPException(status_code=400, detail="Cannot alter own admin account status")
+
+    user.account_status = new_status
     db.commit()
-    return {"message": "User status updated"}
+    db.refresh(user)
+
+    return {
+        "message": f"User status updated to {new_status}",
+        "user_id": user.user_id,
+        "account_status": user.account_status
+    }
 
 
-@router.get("/ui", response_class=HTMLResponse)
-def admin_ui(
-    request: Request,
-    db: Session = Depends(get_db),
-    admin_or_redirect: AdminSession | RedirectResponse = Depends(require_admin_ui),
+@router.get("/listings")
+def get_all_listings(
+    status: Optional[str] = None,
+    category: Optional[str] = None,
+    admin: model.User = Depends(require_admin),
+    db: Session = Depends(get_db)
 ):
-    if isinstance(admin_or_redirect, RedirectResponse):
-        return admin_or_redirect
-    listings, orders, users = _admin_ui_data(db)
+    query = db.query(model.Listing)
+    if status:
+        query = query.filter(model.Listing.status == status)
+    if category:
+        query = query.filter(model.Listing.category.ilike(f"%{category}%"))
 
-    resp = templates.TemplateResponse(
-        request,
-        "admin/admin.html",
-        {
-            "listings": listings,
-            "orders": orders,
-            "users": users,
-            "nav_active": "admin",
-            "role_badge": "Admin",
-            "admin_user": admin_or_redirect,
-        },
-    )
-    _set_no_store(resp)
-    return resp
-
-@router.post("/ui/send-customer-reminders")
-def admin_ui_send_customer_reminders(
-    request: Request,
-    db: Session = Depends(get_db),
-    admin_or_redirect: AdminSession | RedirectResponse = Depends(require_admin_ui),
-):
-    if isinstance(admin_or_redirect, RedirectResponse):
-        return admin_or_redirect
-    result = send_customer_due_reminders(db, manual=True)
-    listings, orders, users = _admin_ui_data(db)
-    resp = templates.TemplateResponse(
-        request,
-        "admin/admin.html",
-        {
-            "listings": listings,
-            "orders": orders,
-            "users": users,
-            "nav_active": "admin",
-            "role_badge": "Admin",
-            "admin_user": admin_or_redirect,
-            "task_result": result,
-            "initial_tab": "orders",
-        },
-    )
-    _set_no_store(resp)
-    return resp
+    return query.all()
 
 
-@router.post("/ui/listings/{listing_id}/toggle-delete")
-def admin_ui_toggle_listing_deleted(
+@router.patch("/listings/{listing_id}/status")
+def update_listing_status(
     listing_id: str,
-    tab: str | None = Form(default=None),
-    db: Session = Depends(get_db),
-    admin_or_redirect: AdminSession | RedirectResponse = Depends(require_admin_ui),
+    new_status: str = Query(..., pattern="^(Active|Inactive|Suspended|Removed)$"),
+    admin: model.User = Depends(require_admin),
+    db: Session = Depends(get_db)
 ):
-    if isinstance(admin_or_redirect, RedirectResponse):
-        return admin_or_redirect
-    listing = db.query(ServiceListing).filter(ServiceListing.id == listing_id).first()
-    if listing:
-        if listing.is_deleted:
-            listing.is_deleted = False
-        else:
-            listing.is_deleted = True
-        db.commit()
-    safe_tab = tab if tab in {"listings", "orders", "users"} else "listings"
-    return RedirectResponse(url=f"/admin/ui?tab={safe_tab}", status_code=303)
+    listing = db.query(model.Listing).filter(model.Listing.listing_id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+
+    listing.status = new_status
+    db.commit()
+    db.refresh(listing)
+
+    return {
+        "message": f"Listing status updated to {new_status}",
+        "listing_id": listing.listing_id,
+        "status": listing.status
+    }
 
 
-@router.post("/ui/users/{user_id}/status")
-def admin_ui_set_user_status(
-    user_id: str,
-    status: str = Form(...),
-    reason: str | None = Form(default=None),
-    tab: str | None = Form(default=None),
-    db: Session = Depends(get_db),
-    admin_or_redirect: AdminSession | RedirectResponse = Depends(require_admin_ui),
+@router.delete("/listings/{listing_id}")
+def delete_listing_admin(
+    listing_id: str,
+    admin: model.User = Depends(require_admin),
+    db: Session = Depends(get_db)
 ):
-    if isinstance(admin_or_redirect, RedirectResponse):
-        return admin_or_redirect
-    user = db.query(UserMain).filter(UserMain.id == user_id).first()
-    if user:
-        row = db.query(UserStatus).filter(UserStatus.user_id == user_id).first()
-        if row:
-            row.status = status
-            row.reason = reason
-        else:
-            db.add(UserStatus(user_id=user_id, status=status, reason=reason))
-        db.commit()
-    safe_tab = tab if tab in {"listings", "orders", "users"} else "users"
-    return RedirectResponse(url=f"/admin/ui?tab={safe_tab}", status_code=303)
+    listing = db.query(model.Listing).filter(model.Listing.listing_id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+
+    db.delete(listing)
+    db.commit()
+
+    return {"message": "Listing permanently deleted by administrator", "listing_id": listing_id}
 
 
+@router.get("/reports")
+def get_reports(
+    resolution: Optional[str] = Query(None, pattern="^(Pending|Resolved|Dismissed)$"),
+    admin: model.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    query = db.query(model.Report)
+    if resolution:
+        query = query.filter(model.Report.admin_resolution == resolution)
+
+    reports = query.order_by(model.Report.created_at.desc()).all()
+    return reports
 
 
+@router.patch("/reports/{report_id}/resolve")
+def resolve_report_and_moderate(
+    report_id: str,
+    resolution: str = Query(..., pattern="^(Resolved|Dismissed)$"),
+    action_taken: Optional[str] = Query(None, pattern="^(None|Suspend_User|Ban_User|Remove_Listing)$"),
+    admin: model.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    report = db.query(model.Report).filter(model.Report.report_id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
 
-# @router.patch("/admin/reports/{report_id}")
-# def resolve_report(
-#     report_id: str,
-#     resolution: str,
-#     current_user: model.User = Depends(auth.get_current_user),
-#     db: Session = Depends(get_db)
-# ):
-#     if current_user.role != "Administrator":
-#         raise HTTPException(status_code=403, detail="Admin access required")
+    report.admin_resolution = resolution
 
-#     report = db.query(model.Report).filter(model.Report.report_id == report_id).first()
-#     if not report:
-#         raise HTTPException(status_code=404, detail="Report not found")
+    if action_taken == "Suspend_User":
+        user = db.query(model.User).filter(model.User.user_id == report.reported_entity_id).first()
+        if user:
+            user.account_status = "Suspended"
+    elif action_taken == "Ban_User":
+        user = db.query(model.User).filter(model.User.user_id == report.reported_entity_id).first()
+        if user:
+            user.account_status = "Banned"
+    elif action_taken == "Remove_Listing":
+        listing = db.query(model.Listing).filter(model.Listing.listing_id == report.reported_entity_id).first()
+        if listing:
+            listing.status = "Removed"
 
-#     report.admin_resolution = resolution
-#     db.commit()
-#     db.refresh(report)
+    db.commit()
+    db.refresh(report)
 
-#     return {
-#         "message": "Report resolved successfully",
-#         "report_id": report.report_id,
-#         "admin_resolution": report.admin_resolution
-#     }
+    return {
+        "message": "Report processed successfully",
+        "report_id": report.report_id,
+        "resolution": report.admin_resolution,
+        "action_taken": action_taken or "None"
+    }
+
+
+@router.get("/bookings")
+def get_all_bookings(
+    status: Optional[str] = None,
+    admin: model.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    query = db.query(model.Booking)
+    if status:
+        query = query.filter(model.Booking.booking_status == status)
+
+    return query.order_by(model.Booking.created_at.desc()).all()
