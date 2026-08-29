@@ -47,24 +47,6 @@ def signup(data: schema.UserCreate, db=Depends(get_db)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-
-@router.post("/login")
-def login(data:schema.userlogin, db=Depends(get_db)):
-    user = db.query(model.User).filter(model.User.email==data.email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail=f"Invalid credential")
-
-    if user.encrypted_credentials!= data.password:
-        raise HTTPException(status_code=404, detail=f"Invalid credential")
-
-    access_token = auth.create_access_token(
-        data = {"user_id": user.user_id},
-        expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
-
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
 def require_admin(current_user: model.User = Depends(auth.get_current_user)):
     if current_user.role != "admin":
         raise HTTPException(

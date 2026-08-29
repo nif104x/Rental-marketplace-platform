@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
 
-from app.routes import admin, booking, conversation, listings, notification, report, review, search, user, wishlist
+from app.routes import admin, booking, conversation, listings, notification, report, review, search, user, wishlist, login
 from app.db import engine
 
 app = FastAPI()
@@ -17,6 +17,7 @@ app.include_router(review.router)
 app.include_router(search.router)
 app.include_router(user.router)
 app.include_router(wishlist.router)
+app.include_router(login.router)
 
 
 # app.mount("/images", StaticFiles(directory="../frontend/images"), name="images")

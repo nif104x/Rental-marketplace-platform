@@ -11,7 +11,8 @@ from jwt.exceptions import InvalidTokenError
 from app import db, model
 
 from fastapi.security import OAuth2PasswordBearer
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login/")
 
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
