@@ -1,21 +1,26 @@
 from fastapi import FastAPI
-from sqlalchemy import text
-from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from app.controllers import auth_router, listing_router, booking_router, review_router
+from app.controllers.view_controller import router as view_router
+from app.core.database import Base, engine
 
-from app.user import router as user
-from app.db import engine
+Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(title="Rental Marketplace Platform", version="1.0.0")
 
-# app.mount("/images", StaticFiles(directory="../frontend/images"), name="images")
-app.include_router(user)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.get("/")
-def home():
-    return {"message": "API is running"}
+# Views (HTML pages)
+app.include_router(view_router)
 
-@app.get("/db-test")
-def db_test():
-    with engine.connect() as conn:
-        conn.execute(text("SELECT 1"))
-    return {"database": "connected"}
+# API Endpoints
+app.include_router(auth_router, prefix="/api")
+app.include_router(listing_router, prefix="/api")
+app.include_router(booking_router, prefix="/api")
+app.include_router(review_router, prefix="/api")

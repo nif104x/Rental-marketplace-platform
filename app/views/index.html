@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Home - RentalHub{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto mt-8">
+    <h1 class="text-3xl font-bold mb-6 text-gray-800">Available Rentals</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {% for listing in listings %}
+        <div class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 flex flex-col justify-between">
+            <div class="p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-2">{{ listing.title }}</h2>
+                <p class="text-gray-600 mb-4 line-clamp-2">{{ listing.description }}</p>
+                <p class="text-lg font-semibold text-blue-600">${{ listing.price_per_day }} / day</p>
+            </div>
+            <div class="p-6 pt-0">
+                <a href="/listings/{{ listing.id }}" class="block text-center w-full bg-blue-600 text-white font-medium py-2 rounded-lg hover:bg-blue-700 transition duration-200">
+                    View Details
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-gray-500">No active listings available.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

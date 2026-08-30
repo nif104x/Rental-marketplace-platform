@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Create Listing - RentalHub{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto bg-white p-8 rounded-lg shadow-md border border-gray-200 mt-10">
+    <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Create New Listing</h2>
+    
+    <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4 text-sm"></div>
+
+    <form id="create-listing-form" class="space-y-4">
+        <div>
+            <label class="block text-gray-700 font-medium text-sm mb-1">Title</label>
+            <input type="text" id="title" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Sony Alpha A7 III">
+        </div>
+        <div>
+            <label class="block text-gray-700 font-medium text-sm mb-1">Description</label>
+            <textarea id="description" required rows="3" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Item condition, inclusions, etc."></textarea>
+        </div>
+        <div>
+            <label class="block text-gray-700 font-medium text-sm mb-1">Price Per Day ($)</label>
+            <input type="number" step="0.01" id="price_per_day" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="45.00">
+        </div>
+        <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2 rounded-lg hover:bg-blue-700 transition duration-200">
+            Publish Listing
+        </button>
+    </form>
+</div>
+
+<script>
+document.getElementById('create-listing-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('access_token');
+    const errorDiv = document.getElementById('error-message');
+    errorDiv.classList.add('hidden');
+
+    if (!token) {
+        errorDiv.textContent = 'You must be logged in to create a listing.';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+
+    const payload = {
+        title: document.getElementById('title').value,
+        description: document.getElementById('description').value,
+        price_per_day: parseFloat(document.getElementById('price_per_day').value)
+    };
+
+    try {
+        const response = await fetch('/api/listings/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            window.location.href = `/listings/${data.id}`;
+        } else {
+            errorDiv.textContent = data.detail || 'Failed to create listing';
+            errorDiv.classList.remove('hidden');
+        }
+    } catch (err) {
+        errorDiv.textContent = 'Server connection error';
+        errorDiv.classList.remove('hidden');
+    }
+});
+</script>
+{% endblock %}

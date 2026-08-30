@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}RentalHub{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col justify-between">
+
+    <!-- NAV BAR -->
+    <nav class="bg-gray-800 text-white p-4">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <a href="/" class="text-xl font-bold">RentalHub</a>
+            <div class="space-x-4 flex items-center" id="nav-links">
+                <a href="/" class="hover:text-gray-300">Home</a>
+                <a href="/login" id="nav-login" class="hover:text-gray-300">Login</a>
+                <a href="/dashboard" id="nav-dashboard" class="hidden hover:text-gray-300">Dashboard</a>
+                <a href="/listings/new" id="nav-create" class="hidden hover:text-gray-300">+ New Listing</a>
+                <button id="nav-logout" class="hidden hover:text-gray-300">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main class="mb-auto p-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-gray-800 text-white p-4 text-center mt-8">
+        <p class="text-sm">&copy; 2026 RentalHub. All rights reserved.</p>
+    </footer>
+
+    <!-- DYNAMIC NAV SCRIPT -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+            document.getElementById('nav-login')?.classList.add('hidden');
+            document.getElementById('nav-dashboard')?.classList.remove('hidden');
+            document.getElementById('nav-create')?.classList.remove('hidden');
+            
+            const logoutBtn = document.getElementById('nav-logout');
+            if (logoutBtn) {
+                logoutBtn.classList.remove('hidden');
+                logoutBtn.addEventListener('click', () => {
+                    localStorage.removeItem('access_token');
+                    window.location.href = '/login';
+                });
+            }
+        }
+    });
+    </script>
+</body>
+</html>

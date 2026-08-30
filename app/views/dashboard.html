@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}My Dashboard - RentalHub{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto mt-8 space-y-8">
+    <h1 class="text-3xl font-bold text-gray-800">My Dashboard</h1>
+
+    <div id="auth-warning" class="hidden bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded-lg">
+        Please <a href="/login" class="underline font-semibold">login</a> to view your dashboard.
+    </div>
+
+    <div id="dashboard-content" class="space-y-8 hidden">
+        <!-- Section 1: My Bookings -->
+        <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">My Rental Bookings</h2>
+            <div id="bookings-list" class="space-y-4">
+                <p class="text-gray-500">Loading bookings...</p>
+            </div>
+        </div>
+
+        <!-- Section 2: My Posted Listings -->
+        <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">My Posted Listings</h2>
+                <a href="/listings/new" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
+                    + New Listing
+                </a>
+            </div>
+            <div id="my-listings-list" class="space-y-4">
+                <p class="text-gray-500">Loading your listings...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const token = localStorage.getItem('access_token');
+    const warningDiv = document.getElementById('auth-warning');
+    const contentDiv = document.getElementById('dashboard-content');
+
+    if (!token) {
+        warningDiv.classList.remove('hidden');
+        return;
+    }
+
+    contentDiv.classList.remove('hidden');
+
+    try {
+        // Fetch My Rentals
+        const rentalsRes = await fetch('/api/rentals/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (rentalsRes.ok) {
+            const rentals = await rentalsRes.json();
+            renderBookings(rentals);
+        }
+
+        // Fetch My Listings
+        const listingsRes = await fetch('/api/listings/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (listingsRes.ok) {
+            const listings = await listingsRes.json();
+            renderMyListings(listings);
+        }
+    } catch (err) {
+        console.error('Error loading dashboard data:', err);
+    }
+});
+
+function renderBookings(rentals) {
+    const container = document.getElementById('bookings-list');
+    if (!rentals || rentals.length === 0) {
+        container.innerHTML = '<p class="text-gray-500">You have no active rental bookings.</p>';
+        return;
+    }
+
+    container.innerHTML = rentals.map(r => `
+        <div class="border border-gray-200 p-4 rounded-lg flex justify-between items-center">
+            <div>
+                <p class="font-bold text-gray-800">Listing #${r.listing_id}</p>
+                <p class="text-sm text-gray-600">Dates: ${r.start_date} to ${r.end_date}</p>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                ${r.status}
+            </span>
+        </div>
+    `).join('');
+}
+
+function renderMyListings(listings) {
+    const container = document.getElementById('my-listings-list');
+    if (!listings || listings.length === 0) {
+        container.innerHTML = '<p class="text-gray-500">You haven\'t posted any listings yet.</p>';
+        return;
+    }
+
+    container.innerHTML = listings.map(l => `
+        <div class="border border-gray-200 p-4 rounded-lg flex justify-between items-center">
+            <div>
+                <a href="/listings/${l.id}" class="font-bold text-blue-600 hover:underline">${l.title}</a>
+                <p class="text-sm text-gray-600">$${l.price_per_day} / day</p>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                ${l.status}
+            </span>
+        </div>
+    `).join('');
+}
+</script>
+{% endblock %}
