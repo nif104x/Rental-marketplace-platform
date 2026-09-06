@@ -5,7 +5,7 @@ from app import schema
 from app import model
 from app import auth
 from datetime import datetime, timedelta, timezone
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_, func
 from decimal import Decimal
 import uuid
@@ -116,16 +116,74 @@ def deleteListing(
         "message": "Listing deleted successfully"
     }
 
-@router.get("/my-listings")
-def get_my_listings(
-    current_user: model.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
-):
-    listings = db.query(model.Listing).filter(
-        model.Listing.lessor_id == current_user.user_id
-    ).all()
+def format_listing_with_images(listing: model.Listing) -> dict:
+    primary_image = None
+    gallery = []
 
-    return listings
+    for img in listing.images:
+        if img.is_primary_preview and primary_image is None:
+            primary_image = img.image_file_url
+        else:
+            gallery.append(img.image_file_url)
+
+    # Fallback: if no image was flagged as primary, use the first available image
+    if not primary_image and gallery:
+        primary_image = gallery.pop(0)
+
+    return {
+        "listing_id": listing.listing_id,
+        "lessor_id": listing.lessor_id,
+        "title": listing.title,
+        "description": listing.description,
+        "category": listing.category,
+        "rental_rate_hourly": listing.rental_rate_hourly,
+        "rental_rate_daily": listing.rental_rate_daily,
+        "rental_rate_weekly": listing.rental_rate_weekly,
+        "security_deposit": listing.security_deposit,
+        "geo_location": listing.geo_location,
+        "status": listing.status,
+        "primary_image": primary_image,
+        "gallery": gallery
+    }
+
+
+# 1. Fetch listing details with cleanly formatted images
+@router.get("/listings/{listing_id}", response_model=schema.ListingOut)
+def get_listing_detail(listing_id: str, db: Session = Depends(get_db)):
+    listing = (
+        db.query(model.Listing)
+        .options(joinedload(model.Listing.images))
+        .filter(model.Listing.listing_id == listing_id)
+        .first()
+    )
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+
+    return format_listing_with_images(listing)
+
+
+# 2. Dedicated separate images endpoint (for gallery modals or sliders)
+@router.get("/listings/{listing_id}/images", response_model=schema.ListingImagesOut)
+def get_listing_images_only(listing_id: str, db: Session = Depends(get_db)):
+    images = (
+        db.query(model.Image)
+        .filter(model.Image.listing_id == listing_id)
+        .order_by(model.Image.is_primary_preview.desc())
+        .all()
+    )
+
+    primary = next((img.image_file_url for img in images if img.is_primary_preview), None)
+    gallery = [img.image_file_url for img in images if not img.is_primary_preview]
+
+    if not primary and gallery:
+        primary = gallery.pop(0)
+
+    return {
+        "listing_id": listing_id,
+        "primary_image": primary,
+        "gallery": gallery
+    }
+
 
 @router.get("/{listing_id}/lessee") # tutul eilhan theika current keda nise oita paiba
 def get_listing_lessee_details(

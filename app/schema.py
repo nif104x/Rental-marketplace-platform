@@ -66,6 +66,29 @@ class ListingResponse(ListingBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+class ListingImagesOut(BaseModel):
+    listing_id: str
+    primary_image: Optional[str] = None
+    gallery: List[str] = []
+
+
+class ListingOut(BaseModel):
+    listing_id: str
+    lessor_id: str
+    title: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+    rental_rate_hourly: Optional[Decimal] = None
+    rental_rate_daily: Optional[Decimal] = None
+    rental_rate_weekly: Optional[Decimal] = None
+    security_deposit: Optional[Decimal] = Decimal("0.00")
+    geo_location: Optional[str] = None
+    status: str
+    primary_image: Optional[str] = None
+    gallery: List[str] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
 class ListingUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
