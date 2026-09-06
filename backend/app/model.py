@@ -6,7 +6,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from sqlalchemy.orm import relationship
 from sqlalchemy import Float
-from app.db import Base
+from backend.app.db import Base
 
 def generate_uuid():
     return str(uuid.uuid4())

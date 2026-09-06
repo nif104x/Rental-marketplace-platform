@@ -1,9 +1,9 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from fastapi.responses import JSONResponse
-from app.db import get_db
-from app import schema
-from app import model
-from app import auth
+from backend.app.db import get_db
+from backend.app import schema
+from backend.app import model
+from backend.app import auth
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func

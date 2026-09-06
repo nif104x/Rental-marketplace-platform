@@ -1,9 +1,9 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from fastapi.responses import JSONResponse
-from app.db import get_db
-from app import schema
-from app import model
-from app import auth
+from backend.app.db import get_db
+from backend.app import schema
+from backend.app import model
+from backend.app import auth
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_, func
@@ -12,8 +12,14 @@ import uuid
 import shutil
 import math
 from typing import Optional
+import os
+from pathlib import Path
 
 router = APIRouter(prefix="/listings", tags=["listings"])
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+UPLOAD_DIR = BASE_DIR / "uploads"
 
 @router.post("/createListing")
 def creategig(data:schema.ListingCreate, current_user: model.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
@@ -45,23 +51,38 @@ def creategig(data:schema.ListingCreate, current_user: model.User = Depends(auth
 
 
 @router.post("/upload-image")
-def upload_image(lst_id: str = Form(...), image:UploadFile = File(...), db: Session = Depends(get_db)):
+def upload_image(
+    lst_id: str = Form(...),
+    image: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
     image_id = f"IMG-{uuid.uuid4().hex[:6].upper()}"
-    file_path = f"../frontend/images/{image_id}.jpg"
+
+    ext = image.filename.split(".")[-1].lower()
+
+    os.makedirs("uploads", exist_ok=True)
+
+    file_path = UPLOAD_DIR / f"{image_id}.{ext}"
+
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
 
-    image_file_url = f"/images/{image_id}.jpg"
+    image_file_url = f"/uploads/{image_id}.{ext}"
+
     img = model.Image(
-        image_id = image_id,
-        listing_id = lst_id,
-        image_file_url = image_file_url
+        image_id=image_id,
+        listing_id=lst_id,
+        image_file_url=image_file_url
     )
+
     db.add(img)
     db.commit()
     db.refresh(img)
+
     return {
         "message": "Image uploaded successfully",
+        "image_id": image_id,
+        "image_url": image_file_url
     }
 
 # tutul eikhan e age listing save korle listing id paiba oita deya pore image save koiro. 

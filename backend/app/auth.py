@@ -8,9 +8,11 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from jwt.exceptions import InvalidTokenError
-from app import db, model
+from backend.app import model
 
 from fastapi.security import OAuth2PasswordBearer
+
+from backend.app import db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login/")
 

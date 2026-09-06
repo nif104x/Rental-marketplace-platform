@@ -1,8 +1,8 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException
-from app.db import get_db
-from app import schema
-from app import model
-from app import auth
+from backend.app.db import get_db
+from backend.app import schema
+from backend.app import model
+from backend.app import auth
 from datetime import datetime, timedelta, timezone
 
 router = APIRouter(prefix="/login", tags=["login"])
