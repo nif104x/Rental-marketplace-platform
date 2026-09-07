@@ -1,17 +1,10 @@
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
-from fastapi.responses import JSONResponse
-from backend.app.db import get_db
-from backend.app import schema
-from backend.app import model
-from backend.app import auth
-from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_, func
-from decimal import Decimal
+from sqlalchemy import or_, and_
 import uuid
-import shutil
-import math
-from typing import Optional
+
+from backend.app.db import get_db
+from backend.app import schema, model, auth
 
 router = APIRouter(prefix="/review", tags=["review"])
 
@@ -24,26 +17,29 @@ def create_review(
     if not data.target_user_id and not data.target_listing_id:
         raise HTTPException(status_code=400, detail="Must provide target_user_id or target_listing_id")
 
-    if data.rating_score < 0 or data.rating_score > 5:
-        raise HTTPException(status_code=400, detail="Rating score must be between 0 and 5")
+    if data.rating_score < 1 or data.rating_score > 5:
+        raise HTTPException(status_code=400, detail="Rating score must be between 1 and 5")
 
+    # 1. Validate Review for a Listing
     if data.target_listing_id:
         listing = db.query(model.Listing).filter(model.Listing.listing_id == data.target_listing_id).first()
         if not listing:
             raise HTTPException(status_code=404, detail="Listing not found")
-        
+
+        # Allow review if the current user booked this item (Active or Completed)
         valid_booking = db.query(model.Booking).filter(
             model.Booking.listing_id == data.target_listing_id,
             model.Booking.lessee_id == current_user.user_id,
-            model.Booking.booking_status == "Completed"
+            model.Booking.booking_status.in_(["Active", "Completed"])
         ).first()
 
         if not valid_booking:
             raise HTTPException(
                 status_code=403, 
-                detail="You can only review a listing after a successfully completed rental cycle"
+                detail="You can only review a listing that you currently rent or have completed renting."
             )
 
+    # 2. Validate Review for a Counter-Party User
     if data.target_user_id:
         if data.target_user_id == current_user.user_id:
             raise HTTPException(status_code=400, detail="You cannot review yourself")
@@ -55,7 +51,7 @@ def create_review(
         valid_cycle = db.query(model.Booking).join(
             model.Listing, model.Booking.listing_id == model.Listing.listing_id
         ).filter(
-            model.Booking.booking_status == "Completed",
+            model.Booking.booking_status.in_(["Active", "Completed"]),
             or_(
                 and_(model.Booking.lessee_id == current_user.user_id, model.Listing.lessor_id == data.target_user_id),
                 and_(model.Listing.lessor_id == current_user.user_id, model.Booking.lessee_id == data.target_user_id)
@@ -65,7 +61,7 @@ def create_review(
         if not valid_cycle:
             raise HTTPException(
                 status_code=403, 
-                detail="You can only review a counter-party after a successfully completed rental cycle"
+                detail="You can only review a counter-party after initiating or completing a rental cycle."
             )
 
     rev_id = f"REV-{uuid.uuid4().hex[:6].upper()}"
@@ -97,7 +93,6 @@ def get_my_reviews(
             model.Review.reviewer_id == current_user.user_id
         )
     ).all()
-
 
 @router.get("/user/{user_id}")
 def get_user_reviews(user_id: str, db: Session = Depends(get_db)):

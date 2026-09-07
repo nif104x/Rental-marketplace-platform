@@ -211,3 +211,24 @@ def get_lessee_rentals(
         model.Booking.lessee_id == current_user.user_id
     ).all()
     return bookings
+
+
+@router.patch("/{booking_id}/complete")
+def complete_booking(
+    booking_id: str,
+    current_user: model.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    bk = db.query(model.Booking).filter(model.Booking.booking_id == booking_id).first()
+    if not bk:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    lst = db.query(model.Listing).filter(model.Listing.listing_id == bk.listing_id).first()
+    if not lst or current_user.user_id not in [bk.lessee_id, lst.lessor_id]:
+        raise HTTPException(status_code=403, detail="Not authorized to complete this booking")
+
+    bk.booking_status = "Completed"
+    db.commit()
+    db.refresh(bk)
+
+    return {"message": "Rental cycle completed successfully", "booking_id": bk.booking_id}
