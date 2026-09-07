@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Profile - RentHub</title>
+  <style>
+    :root {
+      --primary: #0066ff;
+      --primary-hover: #0052cc;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --warning: #f59e0b;
+      --success: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+
+    header { background: var(--card-bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
+    .nav-container { max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .brand { font-size: 20px; font-weight: 800; color: var(--primary); text-decoration: none; }
+    .nav-actions { display: flex; gap: 10px; align-items: center; }
+
+    .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; border: 1px solid transparent; display: inline-flex; align-items: center; justify-content: center; }
+    .btn-outline { border-color: var(--border); background: transparent; color: var(--text-main); }
+    .btn-outline:hover { background: #f1f5f9; }
+    .btn-primary { background: var(--primary); color: #fff; }
+
+    main { max-width: 1100px; margin: 32px auto; padding: 0 20px; width: 100%; flex: 1; }
+
+    /* Profile Header Card */
+    .profile-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; display: flex; gap: 24px; align-items: center; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    .avatar-circle { width: 84px; height: 84px; border-radius: 50%; background: #e0f2fe; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; flex-shrink: 0; border: 2px solid var(--primary); }
+    .profile-info { flex: 1; }
+    .profile-name { font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .badge-verified { background: #dcfce7; color: var(--success); font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; }
+    .profile-meta { font-size: 13px; color: var(--text-muted); display: flex; gap: 16px; margin-top: 6px; }
+
+    /* Ratings Overview Box */
+    .rating-summary-grid { display: grid; grid-template-columns: 240px 1fr; gap: 24px; margin-bottom: 24px; }
+    .score-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+    .average-num { font-size: 44px; font-weight: 900; color: var(--text-main); line-height: 1; margin-bottom: 8px; }
+    .stars-row { color: var(--warning); font-size: 18px; margin-bottom: 4px; }
+    .review-count-label { font-size: 13px; color: var(--text-muted); }
+
+    /* Reviews List */
+    .reviews-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+    .section-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    
+    .review-card { padding: 16px 0; border-bottom: 1px solid var(--border); }
+    .review-card:last-child { border-bottom: none; }
+    .review-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .reviewer-id { font-size: 13px; font-weight: 700; color: var(--text-main); }
+    .review-date { font-size: 12px; color: var(--text-muted); }
+    .review-stars { color: var(--warning); font-size: 13px; }
+    .review-comment { font-size: 14px; line-height: 1.5; color: #334155; }
+
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+
+    @media (max-width: 700px) {
+      .profile-card { flex-direction: column; text-align: center; }
+      .profile-meta { justify-content: center; }
+      .rating-summary-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="brand">📦 RentHub</a>
+      <div class="nav-actions">
+        <a href="dashboard.html" class="btn btn-outline">Dashboard</a>
+        <a href="index.html" class="btn btn-outline">Catalog</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- User Profile Card -->
+    <div class="profile-card">
+      <div class="avatar-circle" id="userAvatar">U</div>
+      <div class="profile-info">
+        <div class="profile-name">
+          <span id="userName">Loading User...</span>
+          <span class="badge-verified" id="userStatus">Verified</span>
+        </div>
+        <div style="font-size: 13px; color: var(--text-muted); font-family: monospace;" id="userId">ID: ---</div>
+        <div class="profile-meta">
+          <span>📧 <span id="userEmail">---</span></span>
+          <span>📞 <span id="userContact">---</span></span>
+          <span>🏷️ <span id="userRole">Member</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rating Summary and Detailed Reviews Feed -->
+    <div class="rating-summary-grid">
+      <div class="score-box">
+        <div class="average-num" id="avgRatingScore">0.0</div>
+        <div class="stars-row" id="avgRatingStars">☆☆☆☆☆</div>
+        <div class="review-count-label" id="reviewCountText">Based on 0 reviews</div>
+      </div>
+
+      <div class="reviews-card">
+        <div class="section-title">Community Reviews & Reputation</div>
+        <div id="reviewsFeed">
+          <div class="empty-state">Loading user feedback...</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE_URL = window.location.origin.includes(":8000") ? "" : "http://127.0.0.1:8000";
+    const token = localStorage.getItem("access_token");
+    const tokenType = (localStorage.getItem("token_type") || "bearer").replace(/^\w/, c => c.toUpperCase());
+
+    const urlParams = new URLSearchParams(window.location.search);
+    let targetUserId = urlParams.get("id");
+
+    const authHeaders = {
+      "Content-Type": "application/json",
+      "Authorization": `${tokenType} ${token}`
+    };
+
+    async function initProfile() {
+      try {
+        // If no user id is specified in URL, load current logged-in user
+        if (!targetUserId) {
+          if (!token) {
+            window.location.href = "login.html";
+            return;
+          }
+          const meRes = await fetch(`${API_BASE_URL}/user/me`, { headers: authHeaders });
+          if (!meRes.ok) throw new Error("Could not authenticate current user.");
+          targetUserId = await meRes.json();
+        }
+
+        await Promise.all([loadUserData(targetUserId), loadUserReviews(targetUserId)]);
+      } catch (err) {
+        document.getElementById("userName").innerText = "User not found";
+        document.getElementById("reviewsFeed").innerHTML = `<div class="empty-state">${err.message}</div>`;
+      }
+    }
+
+    async function loadUserData(userId) {
+      const res = await fetch(`${API_BASE_URL}/user/${userId}`);
+      if (!res.ok) throw new Error("Failed to load user profile details.");
+      const u = await res.json();
+
+      document.getElementById("userName").innerText = u.name || "Anonymous User";
+      document.getElementById("userAvatar").innerText = (u.name || "U").charAt(0).toUpperCase();
+      document.getElementById("userId").innerText = `ID: ${u.user_id}`;
+      document.getElementById("userEmail").innerText = u.email || "Private";
+      document.getElementById("userContact").innerText = u.contact_details || "N/A";
+      document.getElementById("userRole").innerText = (u.role || "user").toUpperCase();
+      
+      const statusPill = document.getElementById("userStatus");
+      statusPill.innerText = u.verification_status || "Active";
+    }
+
+    async function loadUserReviews(userId) {
+      const feed = document.getElementById("reviewsFeed");
+      try {
+        let res = await fetch(`${API_BASE_URL}/review/user/${userId}`);
+        if (!res.ok) throw new Error("Unable to retrieve reviews.");
+        const reviews = await res.json();
+
+        if (!Array.isArray(reviews) || reviews.length === 0) {
+          document.getElementById("avgRatingScore").innerText = "N/A";
+          document.getElementById("avgRatingStars").innerText = "☆☆☆☆☆";
+          document.getElementById("reviewCountText").innerText = "No reviews yet";
+          feed.innerHTML = `<div class="empty-state">No reviews have been written for this user yet.</div>`;
+          return;
+        }
+
+        // Calculate average rating
+        const sum = reviews.reduce((acc, r) => acc + (parseFloat(r.rating_score) || 0), 0);
+        const avg = (sum / reviews.length).toFixed(1);
+
+        document.getElementById("avgRatingScore").innerText = avg;
+        document.getElementById("reviewCountText").innerText = `Based on ${reviews.length} review${reviews.length > 1 ? 's' : ''}`;
+        
+        const fullStars = Math.round(avg);
+        document.getElementById("avgRatingStars").innerText = "★".repeat(fullStars) + "☆".repeat(5 - fullStars);
+
+        feed.innerHTML = reviews.map(r => {
+          const score = Math.max(0, Math.min(5, parseInt(r.rating_score) || 5));
+          return `
+            <div class="review-card">
+              <div class="review-top">
+                <span class="reviewer-id">Reviewer ID: ${r.reviewer_id}</span>
+                <span class="review-stars">${"★".repeat(score)}${"☆".repeat(5 - score)}</span>
+              </div>
+              <div class="review-comment">${r.qualitative_review || "No written feedback provided."}</div>
+            </div>
+          `;
+        }).join("");
+
+      } catch (err) {
+        feed.innerHTML = `<div class="empty-state">${err.message}</div>`;
+      }
+    }
+
+    initProfile();
+  </script>
+</body>
+</html>

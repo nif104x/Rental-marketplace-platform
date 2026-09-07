@@ -1,51 +1,70 @@
 from decimal import Decimal
 from typing import Optional
+import uuid
+from pydantic import BaseModel
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
-from fastapi.responses import JSONResponse
+
 from backend.app.db import get_db
-from backend.app import schema
-from backend.app import model
-from backend.app import auth
-from datetime import datetime, timedelta, timezone
-from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_, func
-from decimal import Decimal
-import uuid
-import shutil
-import math
-from typing import Optional
+from backend.app import schema, model, auth
 from backend.app.routes.notification import notify_user
 
 router = APIRouter(prefix="/admin", tags=["Admin Operations"])
 
 
+class UserVerificationUpdate(BaseModel):
+    verification_status: str
+
+
+# --- 1. Single Admin Signup ---
+
 @router.post("/signup")
-def signup(data: schema.UserCreate, db=Depends(get_db)):
+def signup(data: schema.UserCreate, db: Session = Depends(get_db)):
+    # Enforce strict single-admin rule across the platform
+    existing_admin = db.query(model.User).filter(model.User.role == "admin").first()
+    if existing_admin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An administrator account already exists. Only one admin user is allowed."
+        )
+
+    # Prevent duplicate email collisions
+    existing_email = db.query(model.User).filter(model.User.email == data.email).first()
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is already registered."
+        )
+
     user_id = f"U-{uuid.uuid4().hex[:6].upper()}"
     user = model.User(
         user_id=user_id,
-        role = "admin",
+        role="admin",
         name=data.name,
-        email = data.email,
-        contact_details=data.contact_details, # use this as mobile no.
+        email=data.email,
+        contact_details=data.contact_details,
         encrypted_credentials=data.password,
-        verification_status="n/a",
+        verification_status="verified",
         account_status="Active"
     )
+
     try:
         db.add(user)
         db.commit()
         db.refresh(user)
-        return JSONResponse(status_code=201, content={"message": "User created successfully"})
-
-
-    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_201_CREATED,
+            content={"message": "Admin user created successfully", "admin_id": user.user_id}
+        )
+    except Exception:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error while creating admin.")
 
+
+# --- 2. Admin Authentication Guard ---
 
 def require_admin(current_user: model.User = Depends(auth.get_current_user)):
     if current_user.role != "admin":
@@ -55,6 +74,8 @@ def require_admin(current_user: model.User = Depends(auth.get_current_user)):
         )
     return current_user
 
+
+# --- 3. Dashboard KPI Statistics ---
 
 @router.get("/dashboard/stats")
 def get_dashboard_stats(
@@ -69,6 +90,9 @@ def get_dashboard_stats(
     pending_reports = db.query(func.count(model.Report.report_id)).filter(
         model.Report.admin_resolution == "Pending"
     ).scalar() or 0
+    pending_verifications = db.query(func.count(model.User.user_id)).filter(
+        model.User.verification_status.ilike("pending")
+    ).scalar() or 0
 
     total_fees_collected = db.query(func.sum(model.Booking.service_fee)).filter(
         model.Booking.booking_status.in_(["Active", "Completed"])
@@ -79,9 +103,12 @@ def get_dashboard_stats(
         "total_listings": total_listings,
         "active_bookings": active_bookings,
         "pending_reports": pending_reports,
+        "pending_verifications": pending_verifications,
         "total_service_revenue": total_fees_collected
     }
 
+
+# --- 4. User Moderation & Verification (KYC) ---
 
 @router.get("/users")
 def get_all_users(
@@ -100,13 +127,38 @@ def get_all_users(
     return [
         {
             "user_id": u.user_id,
+            "name": getattr(u, "name", "User"),
+            "email": getattr(u, "email", "N/A"),
             "contact_details": u.contact_details,
             "role": u.role,
+            "verification_status": getattr(u, "verification_status", "pending"),
             "account_status": u.account_status,
             "created_at": getattr(u, "created_at", None)
         }
         for u in users
     ]
+
+
+@router.patch("/users/{user_id}/verify")
+def verify_user(
+    user_id: str,
+    payload: UserVerificationUpdate,
+    admin: model.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    user = db.query(model.User).filter(model.User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.verification_status = payload.verification_status
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "message": f"User verification updated to {payload.verification_status}",
+        "user_id": user.user_id,
+        "verification_status": user.verification_status
+    }
 
 
 @router.patch("/users/{user_id}/status")
@@ -133,6 +185,8 @@ def update_user_status(
         "account_status": user.account_status
     }
 
+
+# --- 5. Catalog Listing Moderation ---
 
 @router.get("/listings")
 def get_all_listings(
@@ -188,6 +242,8 @@ def delete_listing_admin(
     return {"message": "Listing permanently deleted by administrator", "listing_id": listing_id}
 
 
+# --- 6. Incident & Dispute Reports ---
+
 @router.get("/reports")
 def get_reports(
     resolution: Optional[str] = Query(None, pattern="^(Pending|Resolved|Dismissed)$"),
@@ -198,8 +254,12 @@ def get_reports(
     if resolution:
         query = query.filter(model.Report.admin_resolution == resolution)
 
-    reports = query.order_by(model.Report.created_at.desc()).all()
-    return reports
+    if hasattr(model.Report, "created_at"):
+        query = query.order_by(model.Report.created_at.desc())
+    else:
+        query = query.order_by(model.Report.report_id.desc())
+
+    return query.all()
 
 
 @router.patch("/reports/{report_id}/resolve")
@@ -240,6 +300,8 @@ def resolve_report_and_moderate(
     }
 
 
+# --- 7. Platform Bookings Audit ---
+
 @router.get("/bookings")
 def get_all_bookings(
     status: Optional[str] = None,
@@ -250,4 +312,9 @@ def get_all_bookings(
     if status:
         query = query.filter(model.Booking.booking_status == status)
 
-    return query.order_by(model.Booking.created_at.desc()).all()
+    if hasattr(model.Booking, "created_at"):
+        query = query.order_by(model.Booking.created_at.desc())
+    else:
+        query = query.order_by(model.Booking.booking_id.desc())
+
+    return query.all()

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create an Account - RentHub</title>
+  <style>
+    :root {
+      --primary: #0066ff;
+      --primary-hover: #0052cc;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-outline {
+      border-color: var(--border);
+      background: transparent;
+      color: var(--text-main);
+    }
+    .btn-outline:hover { background: #f1f5f9; }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      width: 100%;
+      padding: 12px;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .signup-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    }
+
+    .card-header {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .card-header h1 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .card-header p {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="password"] {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      background: #ffffff;
+      color: var(--text-main);
+      transition: border-color 0.2s ease;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+    }
+
+    .alert {
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 18px;
+      display: none;
+    }
+    .alert-error { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .alert-success { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+
+    .card-footer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .card-footer a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .card-footer a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 500px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="brand">📦 RentHub</a>
+      <div class="nav-actions">
+        <a href="index.html" class="btn btn-outline">Catalog</a>
+        <a href="login.html" class="btn btn-outline">Sign In</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="signup-card">
+      <div class="card-header">
+        <h1>Create an Account</h1>
+        <p>Join the rental platform to rent or list equipment</p>
+      </div>
+
+      <div id="alertBox" class="alert"></div>
+
+      <form id="signupForm">
+        <div class="form-group">
+          <label for="nameInput">Full Name *</label>
+          <input type="text" id="nameInput" required placeholder="John Doe" />
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="emailInput">Email Address *</label>
+            <input type="email" id="emailInput" required placeholder="name@example.com" />
+          </div>
+
+          <div class="form-group">
+            <label for="contactInput">Mobile / Phone *</label>
+            <input type="tel" id="contactInput" required placeholder="+1 234 567 8900" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="locationInput">City / Preferred Location</label>
+          <input type="text" id="locationInput" placeholder="e.g. Seattle, WA (Optional)" />
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="passwordInput">Password *</label>
+            <input type="password" id="passwordInput" required placeholder="••••••••" minlength="6" />
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPasswordInput">Confirm Password *</label>
+            <input type="password" id="confirmPasswordInput" required placeholder="••••••••" minlength="6" />
+          </div>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn btn-primary">Create Account</button>
+      </form>
+
+      <div class="card-footer">
+        Already have an account? <a href="login.html">Sign in</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE_URL = window.location.origin.includes(":8000") ? "" : "http://127.0.0.1:8000";
+
+    const signupForm = document.getElementById("signupForm");
+    const nameInput = document.getElementById("nameInput");
+    const emailInput = document.getElementById("emailInput");
+    const contactInput = document.getElementById("contactInput");
+    const locationInput = document.getElementById("locationInput");
+    const passwordInput = document.getElementById("passwordInput");
+    const confirmPasswordInput = document.getElementById("confirmPasswordInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const alertBox = document.getElementById("alertBox");
+
+    if (localStorage.getItem("access_token")) {
+      window.location.href = "dashboard.html";
+    }
+
+    signupForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      alertBox.style.display = "none";
+      alertBox.className = "alert";
+
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+
+      if (password !== confirmPassword) {
+        showAlert("Passwords do not match.", "alert-error");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = "Creating account...";
+
+      // Schema matches UserCreate
+      const payload = {
+        name: nameInput.value.trim(),
+        email: emailInput.value.trim(),
+        contact_details: contactInput.value.trim(),
+        location_preferences: locationInput.value.trim() || null,
+        password: password
+      };
+
+      try {
+        // Targets user.router endpoint /user/signup
+        const res = await fetch(`${API_BASE_URL}/user/signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          let errorMsg = "Failed to register account.";
+          if (Array.isArray(data.detail)) {
+            errorMsg = data.detail.map(err => `${err.loc[err.loc.length - 1]}: ${err.msg}`).join(", ");
+          } else if (data.detail) {
+            errorMsg = data.detail;
+          }
+          throw new Error(errorMsg);
+        }
+
+        showAlert("Account created successfully! Redirecting to login...", "alert-success");
+
+        setTimeout(() => {
+          window.location.href = "login.html";
+        }, 1200);
+
+      } catch (err) {
+        showAlert(err.message, "alert-error");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Create Account";
+      }
+    });
+
+    function showAlert(msg, className) {
+      alertBox.className = `alert ${className}`;
+      alertBox.innerText = msg;
+      alertBox.style.display = "block";
+    }
+  </script>
+</body>
+</html>

@@ -45,3 +45,18 @@ def signup(data: schema.UserCreate, db=Depends(get_db)):
 @router.get("/me")
 def me(current_user: model.User = Depends(auth.get_current_user)):
     return current_user.user_id
+
+@router.get("/{user_id}")
+def get_user_profile(user_id: str, db: Session = Depends(get_db)):
+    user = db.query(model.User).filter(model.User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "user_id": user.user_id,
+        "name": user.name,
+        "email": user.email,
+        "contact_details": user.contact_details,
+        "verification_status": user.verification_status,
+        "account_status": user.account_status,
+        "role": user.role
+    }

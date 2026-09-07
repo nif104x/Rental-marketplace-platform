@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Post a New Listing - RentHub</title>
+  <style>
+    :root {
+      --primary: #0066ff;
+      --primary-hover: #0052cc;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .nav-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+    .btn-primary:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    .btn-outline {
+      border-color: var(--border);
+      background: transparent;
+      color: var(--text-main);
+    }
+    .btn-outline:hover {
+      background: #f1f5f9;
+    }
+
+    main {
+      max-width: 800px;
+      margin: 36px auto;
+      padding: 0 20px;
+      width: 100%;
+      flex: 1;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 32px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    }
+
+    .card-header {
+      margin-bottom: 28px;
+    }
+
+    .card-header h1 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .card-header p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .form-section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 28px 0 16px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      background: #ffffff;
+      color: var(--text-main);
+      transition: border-color 0.2s ease;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--primary);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    /* File Upload Area */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      text-align: center;
+      background: var(--bg);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .dropzone:hover {
+      border-color: var(--primary);
+      background: #f0f7ff;
+    }
+
+    .dropzone p {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .dropzone span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .preview-card {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid var(--border);
+      height: 90px;
+      background: #000;
+      cursor: pointer;
+    }
+
+    .preview-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .preview-card.primary {
+      border-color: var(--primary);
+    }
+
+    .primary-badge {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      background: var(--primary);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .remove-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(0, 0, 0, 0.65);
+      color: white;
+      border: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .remove-btn:hover {
+      background: #dc2626;
+    }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .alert-error { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .alert-success { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+
+    @media (max-width: 650px) {
+      .grid-2, .grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="brand">📦 RentHub</a>
+      <div class="nav-actions">
+        <a href="index.html" class="btn btn-outline">Explore Catalog</a>
+        <button class="btn btn-outline" onclick="logout()">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="card">
+      <div class="card-header">
+        <h1>List an Item for Rent</h1>
+        <p>Fill out the details below to publish your equipment and start earning rental income.</p>
+      </div>
+
+      <div id="statusAlert" class="alert"></div>
+
+      <form id="listingForm">
+        <!-- General Info -->
+        <div class="form-section-title">1. Item Overview</div>
+
+        <div class="form-group">
+          <label for="title">Listing Title *</label>
+          <input type="text" id="title" required placeholder="e.g. Sony Alpha A7 IV Camera Body" />
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="category">Category *</label>
+            <select id="category" required>
+              <option value="">Select a category</option>
+              <option value="electronics">Electronics</option>
+              <option value="tools">Tools</option>
+              <option value="events">Events</option>
+              <option value="outdoor">Outdoor</option>
+              <option value="sports">Sports</option>
+              <option value="music">Music</option>
+              <option value="vehicles">Vehicles</option>
+              <option value="appliances">Appliances</option>
+              <option value="apparel">Apparel</option>
+              <option value="baby">Baby</option>
+              <option value="books">Books</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="location">Pickup Location (City / Area) *</label>
+            <input type="text" id="location" required placeholder="e.g. Downtown, Seattle, WA" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Item Description *</label>
+          <textarea id="description" required placeholder="Describe item condition, included accessories, and key features..."></textarea>
+        </div>
+
+        <!-- Pricing Section -->
+        <div class="form-section-title">2. Rental Rates & Security</div>
+
+        <div class="grid-3">
+          <div class="form-group">
+            <label for="dailyRate">Daily Rate ($) *</label>
+            <input type="number" id="dailyRate" step="0.01" min="1" required placeholder="45.00" />
+          </div>
+
+          <div class="form-group">
+            <label for="hourlyRate">Hourly Rate ($)</label>
+            <input type="number" id="hourlyRate" step="0.01" min="0" placeholder="Optional" />
+          </div>
+
+          <div class="form-group">
+            <label for="deposit">Security Deposit ($) *</label>
+            <input type="number" id="deposit" step="0.01" min="0" required value="0.00" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="rules">Item Rules / Instructions</label>
+          <textarea id="rules" style="min-height: 80px;" placeholder="e.g. Keep lenses capped when not in use. Return fully charged."></textarea>
+        </div>
+
+        <!-- Media Upload Section -->
+        <div class="form-section-title">3. Photos & Gallery</div>
+
+        <div class="dropzone" id="dropzoneBox" onclick="document.getElementById('fileInput').click()">
+          <p>📷 Click to choose or drag & drop item images</p>
+          <span>Supports PNG, JPG, JPEG, WEBP (Max 5MB each)</span>
+          <input type="file" id="fileInput" multiple accept="image/*" style="display: none;" />
+        </div>
+
+        <div class="preview-grid" id="previewGrid"></div>
+
+        <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%; margin-top: 32px; padding: 14px; font-size: 15px;">
+          Publish Listing
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE_URL = window.location.origin.includes(":8000") ? "" : "http://127.0.0.1:8000";
+
+    // 1. Strict JWT Session Authentication Verification
+    const token = localStorage.getItem("access_token");
+    const rawTokenType = localStorage.getItem("token_type") || "bearer";
+    const tokenType = rawTokenType.charAt(0).toUpperCase() + rawTokenType.slice(1).toLowerCase();
+
+    if (!token) {
+      alert("You must be signed in to list an item.");
+      window.location.href = "login.html";
+    }
+
+    function logout() {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("token_type");
+      window.location.href = "login.html";
+    }
+
+    // 2. Image Selection & Preview State
+    let selectedFiles = [];
+    let primaryFileIndex = 0;
+
+    const fileInput = document.getElementById("fileInput");
+    const previewGrid = document.getElementById("previewGrid");
+
+    fileInput.addEventListener("change", (e) => {
+      const files = Array.from(e.target.files);
+      files.forEach(f => selectedFiles.push(f));
+      renderPreviews();
+      fileInput.value = "";
+    });
+
+    function renderPreviews() {
+      previewGrid.innerHTML = "";
+      selectedFiles.forEach((file, index) => {
+        const url = URL.createObjectURL(file);
+        const card = document.createElement("div");
+        card.className = `preview-card ${index === primaryFileIndex ? 'primary' : ''}`;
+        card.title = "Click to set as primary preview";
+        card.onclick = (e) => {
+          if (e.target.tagName !== 'BUTTON') {
+            primaryFileIndex = index;
+            renderPreviews();
+          }
+        };
+
+        card.innerHTML = `
+          <img src="${url}" alt="Preview" />
+          ${index === primaryFileIndex ? '<span class="primary-badge">Primary</span>' : ''}
+          <button type="button" class="remove-btn" onclick="removeImage(event, ${index})">&times;</button>
+        `;
+        previewGrid.appendChild(card);
+      });
+    }
+
+    function removeImage(e, index) {
+      e.stopPropagation();
+      selectedFiles.splice(index, 1);
+      if (primaryFileIndex >= selectedFiles.length) {
+        primaryFileIndex = Math.max(0, selectedFiles.length - 1);
+      }
+      renderPreviews();
+    }
+
+    // 3. Form Submission (Step 1: Create Listing Record, Step 2: Upload Images)
+    const listingForm = document.getElementById("listingForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const statusAlert = document.getElementById("statusAlert");
+
+    listingForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      statusAlert.style.display = "none";
+      submitBtn.disabled = true;
+      submitBtn.innerText = "Creating listing...";
+
+      // Build JSON payload matching schema.ListingCreate
+      const jsonPayload = {
+        title: document.getElementById("title").value.trim(),
+        category: document.getElementById("category").value,
+        geo_location: document.getElementById("location").value.trim(),
+        description: document.getElementById("description").value.trim(),
+        rental_rate_daily: parseFloat(document.getElementById("dailyRate").value),
+        rental_rate_hourly: document.getElementById("hourlyRate").value ? parseFloat(document.getElementById("hourlyRate").value) : null,
+        security_deposit: parseFloat(document.getElementById("deposit").value),
+        item_rules: document.getElementById("rules").value.trim() || null
+      };
+
+      try {
+        // Step 1: POST to /listings/createListing
+        const res = await fetch(`${API_BASE_URL}/listings/createListing`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `${tokenType} ${token}`
+          },
+          body: JSON.stringify(jsonPayload)
+        });
+
+        if (res.status === 401) {
+          logout();
+          throw new Error("Session expired. Please sign in again.");
+        }
+
+        const data = await res.json();
+        if (!res.ok) {
+          let errMsg = "Failed to create listing.";
+          if (Array.isArray(data.detail)) {
+            errMsg = data.detail.map(d => `${d.loc[d.loc.length - 1]}: ${d.msg}`).join(", ");
+          } else if (data.detail) {
+            errMsg = data.detail;
+          }
+          throw new Error(errMsg);
+        }
+
+        // Support both lst_id and listing_id response shapes
+        const createdListingId = data.lst_id || data.listing_id || data.id;
+
+        // Step 2: Upload Images using /listings/upload-image
+        if (selectedFiles.length > 0 && createdListingId) {
+          submitBtn.innerText = "Uploading photos...";
+
+          // Ensure primary image is sent first so it becomes the primary preview
+          const filesInOrder = [...selectedFiles];
+          if (primaryFileIndex > 0 && primaryFileIndex < filesInOrder.length) {
+            const [primaryFile] = filesInOrder.splice(primaryFileIndex, 1);
+            filesInOrder.unshift(primaryFile);
+          }
+
+          for (let i = 0; i < filesInOrder.length; i++) {
+            submitBtn.innerText = `Uploading photo ${i + 1} of ${filesInOrder.length}...`;
+            const imgFormData = new FormData();
+            imgFormData.append("lst_id", createdListingId);
+            imgFormData.append("image", filesInOrder[i]);
+
+            const imgRes = await fetch(`${API_BASE_URL}/listings/upload-image`, {
+              method: "POST",
+              headers: {
+                "Authorization": `${tokenType} ${token}`
+              },
+              body: imgFormData
+            });
+
+            if (!imgRes.ok) {
+              console.warn(`Image ${i + 1} failed to upload.`);
+            }
+          }
+        }
+
+        statusAlert.className = "alert alert-success";
+        statusAlert.innerText = "Listing published successfully! Redirecting...";
+        statusAlert.style.display = "block";
+
+        setTimeout(() => {
+          window.location.href = `listing-detail.html?id=${createdListingId}`;
+        }, 1200);
+
+      } catch (err) {
+        statusAlert.className = "alert alert-error";
+        statusAlert.innerText = err.message;
+        statusAlert.style.display = "block";
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Publish Listing";
+      }
+    });
+  </script>
+</body>
+</html>

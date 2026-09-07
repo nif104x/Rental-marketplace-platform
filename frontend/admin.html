@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Portal - RentHub</title>
+  <style>
+    :root {
+      --primary: #0066ff;
+      --primary-hover: #0052cc;
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    header { background: var(--surface); border-bottom: 1px solid var(--surface-border); z-index: 50; flex-shrink: 0; }
+    .nav-container { max-width: 1600px; margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .brand { font-size: 19px; font-weight: 800; color: #38bdf8; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+    .admin-tag { font-size: 11px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3); }
+
+    .btn { padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; border: 1px solid transparent; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s ease; }
+    .btn-outline { border-color: var(--surface-border); background: transparent; color: var(--text-main); }
+    .btn-outline:hover { background: #334155; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-success { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+    .btn-success:hover { background: rgba(16, 185, 129, 0.25); }
+    .btn-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+    .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+    .btn-sm { padding: 4px 8px; font-size: 12px; }
+
+    .admin-layout { display: flex; flex: 1; height: calc(100vh - 57px); max-width: 1600px; margin: 0 auto; width: 100%; overflow: hidden; }
+
+    /* Left Sidebar */
+    .sidebar { width: 250px; background: var(--surface); border-right: 1px solid var(--surface-border); padding: 16px 12px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .nav-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 10px 4px; }
+    .nav-btn { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted); background: transparent; border: none; cursor: pointer; width: 100%; text-align: left; }
+    .nav-btn:hover { background: #334155; color: var(--text-main); }
+    .nav-btn.active { background: #0284c7; color: #fff; }
+
+    /* Main Workspace */
+    .content-area { flex: 1; overflow-y: auto; padding: 24px 32px; background: var(--bg); }
+    
+    /* Stats Grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--surface-border); border-radius: var(--radius); padding: 18px; }
+    .stat-title { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 6px; }
+    .stat-val { font-size: 26px; font-weight: 800; }
+
+    /* Tables */
+    .panel-box { background: var(--surface); border: 1px solid var(--surface-border); border-radius: var(--radius); overflow-x: auto; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th { background: #162032; padding: 12px 16px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--surface-border); white-space: nowrap; }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--surface-border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+
+    .status-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: capitalize; }
+    .pill-active, .pill-verified, .pill-resolved { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .pill-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .pill-banned, .pill-suspended, .pill-removed { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+
+    .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; display: none; }
+    .alert-error { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .alert-success { background: rgba(16, 185, 129, 0.2); color: #86efac; border: 1px solid rgba(16, 185, 129, 0.4); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="admin.html" class="brand">
+        🛡️ RentHub Management <span class="admin-tag">SUPERADMIN</span>
+      </a>
+      <div style="display: flex; gap: 10px;">
+        <a href="dashboard.html" class="btn btn-outline">User Dashboard</a>
+        <button class="btn btn-outline" onclick="logout()">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="admin-layout">
+    <aside class="sidebar">
+      <div class="nav-label">Overview</div>
+      <button class="nav-btn active" onclick="switchPanel('stats')">📊 Platform Metrics</button>
+      
+      <div class="nav-label">Governance</div>
+      <button class="nav-btn" onclick="switchPanel('users')">👥 User & KYC Moderation</button>
+      <button class="nav-btn" onclick="switchPanel('listings')">📦 Catalog Listings</button>
+      <button class="nav-btn" onclick="switchPanel('reports')">⚠️ Incident Reports</button>
+      <button class="nav-btn" onclick="switchPanel('bookings')">📑 Booking Audit</button>
+    </aside>
+
+    <main class="content-area">
+      <div id="adminAlert" class="alert"></div>
+
+      <!-- 1. STATS METRICS -->
+      <section id="panelStats">
+        <h2 style="margin-bottom: 16px; font-size: 18px;">Global Performance Metrics</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-title">Total Registered Users</div>
+            <div class="stat-val" id="statUsers">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">Catalog Listings</div>
+            <div class="stat-val" id="statListings">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">Active Bookings</div>
+            <div class="stat-val" id="statActiveBookings">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">Pending Reports</div>
+            <div class="stat-val" id="statPendingReports">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">Platform Revenue (5% fees)</div>
+            <div class="stat-val" id="statRevenue">$0.00</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. USERS MODERATION -->
+      <section id="panelUsers" style="display: none;">
+        <h2 style="margin-bottom: 16px; font-size: 18px;">User Accounts & KYC Verification</h2>
+        <div class="panel-box">
+          <table>
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>Name</th>
+                <th>Email / Contact</th>
+                <th>Role</th>
+                <th>KYC Verification</th>
+                <th>Account Status</th>
+                <th>Moderation Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTbody">
+              <tr><td colspan="7" style="text-align:center; padding: 24px;">Loading users...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 3. LISTINGS MODERATION -->
+      <section id="panelListings" style="display: none;">
+        <h2 style="margin-bottom: 16px; font-size: 18px;">All Platform Listings</h2>
+        <div class="panel-box">
+          <table>
+            <thead>
+              <tr>
+                <th>Listing ID</th>
+                <th>Owner ID</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Daily Rate</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="listingsTbody">
+              <tr><td colspan="7" style="text-align:center; padding: 24px;">Loading listings...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4. INCIDENT REPORTS -->
+      <section id="panelReports" style="display: none;">
+        <h2 style="margin-bottom: 16px; font-size: 18px;">Disputes & Incident Reports</h2>
+        <div class="panel-box">
+          <table>
+            <thead>
+              <tr>
+                <th>Report ID</th>
+                <th>Reporter ID</th>
+                <th>Reported Entity ID</th>
+                <th>Reason</th>
+                <th>Resolution</th>
+                <th>Take Action</th>
+              </tr>
+            </thead>
+            <tbody id="reportsTbody">
+              <tr><td colspan="6" style="text-align:center; padding: 24px;">Loading reports...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5. BOOKING AUDIT -->
+      <section id="panelBookings" style="display: none;">
+        <h2 style="margin-bottom: 16px; font-size: 18px;">System Booking Audit</h2>
+        <div class="panel-box">
+          <table>
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>Listing ID</th>
+                <th>Renter ID</th>
+                <th>Rental Cost</th>
+                <th>Platform Fee</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="bookingsTbody">
+              <tr><td colspan="6" style="text-align:center; padding: 24px;">Loading bookings...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const API_BASE_URL = window.location.origin.includes(":8000") ? "" : "http://127.0.0.1:8000";
+    const token = localStorage.getItem("access_token");
+    const tokenType = (localStorage.getItem("token_type") || "bearer").replace(/^\w/, c => c.toUpperCase());
+    const role = localStorage.getItem("role");
+
+    // Guard: ensure logged-in user is an administrator
+    if (!token || role !== "admin") {
+      alert("Unauthorized: Administrator credentials required.");
+      window.location.replace("login.html");
+    }
+
+    const authHeaders = {
+      "Content-Type": "application/json",
+      "Authorization": `${tokenType} ${token}`
+    };
+
+    function logout() {
+      localStorage.clear();
+      window.location.replace("login.html");
+    }
+
+    function showAlert(msg, isSuccess = true) {
+      const el = document.getElementById("adminAlert");
+      el.className = `alert ${isSuccess ? 'alert-success' : 'alert-error'}`;
+      el.innerText = msg;
+      el.style.display = "block";
+      setTimeout(() => { el.style.display = "none"; }, 4000);
+    }
+
+    function switchPanel(name) {
+      const panels = ['stats', 'users', 'listings', 'reports', 'bookings'];
+      panels.forEach(p => {
+        document.getElementById(`panel${p.charAt(0).toUpperCase() + p.slice(1)}`).style.display = (p === name) ? 'block' : 'none';
+      });
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('onclick').includes(`'${name}'`));
+      });
+    }
+
+    // 1. Dashboard Stats
+    async function loadStats() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, { headers: authHeaders });
+        if (!res.ok) throw new Error("Failed to load statistics.");
+        const d = await res.json();
+        document.getElementById("statUsers").innerText = d.total_users;
+        document.getElementById("statListings").innerText = d.total_listings;
+        document.getElementById("statActiveBookings").innerText = d.active_bookings;
+        document.getElementById("statPendingReports").innerText = d.pending_reports;
+        document.getElementById("statRevenue").innerText = `$${parseFloat(d.total_service_revenue || 0).toFixed(2)}`;
+      } catch (err) {
+        showAlert(err.message, false);
+      }
+    }
+
+    // 2. User Moderation & KYC
+    async function loadUsers() {
+      const tbody = document.getElementById("usersTbody");
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/users`, { headers: authHeaders });
+        const users = await res.json();
+        if (!res.ok) throw new Error(users.detail || "Unable to fetch users");
+
+        tbody.innerHTML = users.map(u => `
+          <tr>
+            <td style="font-family: monospace;">${u.user_id}</td>
+            <td><strong>${u.name || 'User'}</strong></td>
+            <td>${u.email}<br><span style="color:var(--text-muted); font-size:11px;">${u.contact_details}</span></td>
+            <td><span class="status-pill ${u.role === 'admin' ? 'pill-verified' : ''}">${u.role}</span></td>
+            <td><span class="status-pill pill-${(u.verification_status || 'pending').toLowerCase()}">${u.verification_status || 'pending'}</span></td>
+            <td><span class="status-pill pill-${(u.account_status || 'active').toLowerCase()}">${u.account_status}</span></td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                ${u.verification_status !== 'verified' ? `
+                  <button class="btn btn-success btn-sm" onclick="verifyUser('${u.user_id}', 'verified')">Approve KYC</button>
+                ` : ''}
+                ${u.account_status === 'Active' ? `
+                  <button class="btn btn-danger btn-sm" onclick="setUserStatus('${u.user_id}', 'Suspended')">Suspend</button>
+                  <button class="btn btn-danger btn-sm" onclick="setUserStatus('${u.user_id}', 'Banned')">Ban</button>
+                ` : `
+                  <button class="btn btn-success btn-sm" onclick="setUserStatus('${u.user_id}', 'Active')">Reactivate</button>
+                `}
+              </div>
+            </td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:var(--danger); text-align:center;">${err.message}</td></tr>`;
+      }
+    }
+
+    async function verifyUser(userId, status) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/verify`, {
+          method: "PATCH",
+          headers: authHeaders,
+          body: JSON.stringify({ verification_status: status })
+        });
+        if (!res.ok) throw new Error("Failed to verify user.");
+        showAlert(`User ${userId} KYC marked as ${status}`);
+        loadUsers();
+      } catch (err) { showAlert(err.message, false); }
+    }
+
+    async function setUserStatus(userId, status) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/status?new_status=${status}`, {
+          method: "PATCH",
+          headers: authHeaders
+        });
+        if (!res.ok) throw new Error("Failed to alter status.");
+        showAlert(`User status updated to ${status}`);
+        loadUsers();
+      } catch (err) { showAlert(err.message, false); }
+    }
+
+    // 3. Listings Moderation
+    async function loadListings() {
+      const tbody = document.getElementById("listingsTbody");
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/listings`, { headers: authHeaders });
+        const items = await res.json();
+        tbody.innerHTML = items.map(l => `
+          <tr>
+            <td style="font-family: monospace;">${l.listing_id}</td>
+            <td style="font-family: monospace;">${l.lessor_id}</td>
+            <td><strong>${l.title}</strong></td>
+            <td>${l.category}</td>
+            <td>$${parseFloat(l.rental_rate_daily || 0).toFixed(2)}</td>
+            <td><span class="status-pill pill-${(l.status || 'active').toLowerCase()}">${l.status}</span></td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                ${l.status === 'Active' ? `
+                  <button class="btn btn-outline btn-sm" onclick="setListingStatus('${l.listing_id}', 'Suspended')">Suspend</button>
+                ` : `
+                  <button class="btn btn-success btn-sm" onclick="setListingStatus('${l.listing_id}', 'Active')">Activate</button>
+                `}
+                <button class="btn btn-danger btn-sm" onclick="deleteListing('${l.listing_id}')">Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:var(--danger); text-align:center;">${err.message}</td></tr>`;
+      }
+    }
+
+    async function setListingStatus(id, st) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/listings/${id}/status?new_status=${st}`, {
+          method: "PATCH",
+          headers: authHeaders
+        });
+        if (!res.ok) throw new Error("Failed to update listing status.");
+        showAlert(`Listing marked as ${st}`);
+        loadListings();
+      } catch (err) { showAlert(err.message, false); }
+    }
+
+    async function deleteListing(id) {
+      if (!confirm(`Permanently delete listing ${id}?`)) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/listings/${id}`, {
+          method: "DELETE",
+          headers: authHeaders
+        });
+        if (!res.ok) throw new Error("Failed to delete listing.");
+        showAlert(`Listing ${id} deleted.`);
+        loadListings();
+      } catch (err) { showAlert(err.message, false); }
+    }
+
+    // 4. Reports Moderation
+    async function loadReports() {
+      const tbody = document.getElementById("reportsTbody");
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/reports`, { headers: authHeaders });
+        const reps = await res.json();
+        tbody.innerHTML = reps.map(r => `
+          <tr>
+            <td style="font-family: monospace;">${r.report_id}</td>
+            <td>${r.reporter_id}</td>
+            <td><strong>${r.reported_entity_id}</strong></td>
+            <td>${r.flag_reason}</td>
+            <td><span class="status-pill pill-${(r.admin_resolution || 'pending').toLowerCase()}">${r.admin_resolution}</span></td>
+            <td>
+              ${r.admin_resolution === 'Pending' ? `
+                <div style="display:flex; gap:6px;">
+                  <button class="btn btn-danger btn-sm" onclick="resolveReport('${r.report_id}', 'Resolved', 'Ban_User')">Ban Entity</button>
+                  <button class="btn btn-outline btn-sm" onclick="resolveReport('${r.report_id}', 'Dismissed', 'None')">Dismiss</button>
+                </div>
+              ` : '<span style="color:var(--text-muted); font-size:12px;">Processed</span>'}
+            </td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="color:var(--danger); text-align:center;">${err.message}</td></tr>`;
+      }
+    }
+
+    async function resolveReport(id, resolution, action) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/reports/${id}/resolve?resolution=${resolution}&action_taken=${action}`, {
+          method: "PATCH",
+          headers: authHeaders
+        });
+        if (!res.ok) throw new Error("Failed to resolve report.");
+        showAlert(`Report marked as ${resolution}`);
+        loadReports();
+      } catch (err) { showAlert(err.message, false); }
+    }
+
+    // 5. Booking Audit
+    async function loadBookings() {
+      const tbody = document.getElementById("bookingsTbody");
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/bookings`, { headers: authHeaders });
+        const bks = await res.json();
+        tbody.innerHTML = bks.map(b => `
+          <tr>
+            <td style="font-family: monospace;">${b.booking_id}</td>
+            <td>${b.listing_id}</td>
+            <td>${b.lessee_id}</td>
+            <td>$${parseFloat(b.rental_cost || 0).toFixed(2)}</td>
+            <td>$${parseFloat(b.service_fee || 0).toFixed(2)}</td>
+            <td><span class="status-pill pill-${(b.booking_status || 'active').toLowerCase()}">${b.booking_status}</span></td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="color:var(--danger); text-align:center;">${err.message}</td></tr>`;
+      }
+    }
+
+    loadStats();
+    loadUsers();
+    loadListings();
+    loadReports();
+    loadBookings();
+  </script>
+</body>
+</html>

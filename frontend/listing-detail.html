@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Listing Details - RentHub</title>
+  <style>
+    :root {
+      --primary: #0066ff;
+      --primary-hover: #0052cc;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      width: 100%;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+    .btn-primary:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    .btn-outline {
+      border-color: var(--border);
+      background: transparent;
+      color: var(--text-main);
+    }
+    .btn-outline:hover {
+      background: #f1f5f9;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 0 24px;
+      width: 100%;
+      flex: 1;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.8fr 1.2fr;
+      gap: 36px;
+      align-items: start;
+    }
+
+    /* Media Gallery */
+    .gallery {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .main-img-box {
+      width: 100%;
+      height: 420px;
+      background: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .main-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .thumbnails {
+      display: flex;
+      gap: 12px;
+      padding: 14px;
+      overflow-x: auto;
+      background: var(--card-bg);
+      border-top: 1px solid var(--border);
+    }
+
+    .thumb {
+      width: 74px;
+      height: 56px;
+      border-radius: 6px;
+      object-fit: cover;
+      cursor: pointer;
+      border: 2px solid transparent;
+      opacity: 0.7;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .thumb.active, .thumb:hover {
+      border-color: var(--primary);
+      opacity: 1;
+    }
+
+    /* Listing Overview */
+    .info-card {
+      margin-top: 24px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 20px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .location {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 24px 0 10px 0;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+
+    .description {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #334155;
+      white-space: pre-line;
+    }
+
+    /* Booking Sidebar Widget */
+    .booking-sidebar {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      position: sticky;
+      top: 90px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .price-rates {
+      margin-bottom: 18px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .rate-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .rate-item strong {
+      color: var(--text-main);
+      font-size: 16px;
+    }
+
+    .booking-form label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .booking-form input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 14px;
+      outline: none;
+    }
+
+    .booking-form input:focus {
+      border-color: var(--primary);
+    }
+
+    .summary-box {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 14px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .summary-row.total {
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      font-weight: 800;
+      font-size: 16px;
+      color: var(--text-main);
+    }
+
+    .alert {
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      display: none;
+    }
+    .alert-error { background: #fee2e2; color: #b91c1c; }
+    .alert-success { background: #dcfce7; color: #15803d; }
+
+    /* Reviews Section */
+    .review-item {
+      border-bottom: 1px solid var(--border);
+      padding: 14px 0;
+    }
+    .review-item:last-child {
+      border-bottom: none;
+    }
+    .review-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .review-stars {
+      color: #f59e0b;
+      font-size: 14px;
+    }
+
+    @media (max-width: 860px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="brand">📦 RentHub</a>
+      <div class="nav-actions">
+        <a href="index.html" class="btn btn-outline">&larr; Catalog</a>
+        <a href="dashboard.html" class="btn btn-outline">Dashboard</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="loading" style="text-align:center; padding: 50px;">Loading listing data...</div>
+
+    <div class="layout" id="listingContainer" style="display: none;">
+      <!-- Left: Photos & Description -->
+      <section>
+        <div class="gallery">
+          <div class="main-img-box">
+            <img id="mainImage" src="" alt="Main Preview" />
+          </div>
+          <div class="thumbnails" id="thumbnailsBar"></div>
+        </div>
+
+        <div class="info-card">
+          <span class="badge" id="categoryBadge">Category</span>
+          <h1 id="listingTitle">Title</h1>
+          <div class="location" id="listingLocation">📍 Location</div>
+
+          <div class="section-title">Item Description</div>
+          <div class="description" id="listingDescription"></div>
+
+          <div class="section-title">Rental Rules & Conditions</div>
+          <div class="description" id="listingRules">No specific rules specified by the owner.</div>
+
+          <div class="section-title">Customer Reviews</div>
+          <div id="reviewsList">
+            <p style="color: var(--text-muted); font-size: 14px;">No reviews yet for this listing.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Pricing & Booking Widget -->
+      <aside>
+        <div class="booking-sidebar">
+          <h3 style="margin-bottom: 14px; font-size: 18px;">Rental Pricing</h3>
+          <div class="price-rates">
+            <div class="rate-item" id="dailyRateRow">
+              <span>Daily Rate</span>
+              <strong id="dailyRateDisplay">$0.00</strong>
+            </div>
+            <div class="rate-item" id="hourlyRateRow" style="display:none;">
+              <span>Hourly Rate</span>
+              <strong id="hourlyRateDisplay">$0.00</strong>
+            </div>
+            <div class="rate-item" id="depositRow">
+              <span>Security Deposit</span>
+              <strong id="depositDisplay">$0.00</strong>
+            </div>
+          </div>
+
+          <div id="bookingAlert" class="alert"></div>
+
+          <form class="booking-form" id="bookingForm">
+            <label for="startDate">Rental Start Date & Time</label>
+            <input type="datetime-local" id="startDate" required />
+
+            <label for="endDate">Rental End Date & Time</label>
+            <input type="datetime-local" id="endDate" required />
+
+            <div class="summary-box">
+              <div class="summary-row">
+                <span>Duration</span>
+                <span id="durationDays">0 days</span>
+              </div>
+              <div class="summary-row">
+                <span>Estimated Rent</span>
+                <span id="estimatedRent">$0.00</span>
+              </div>
+              <div class="summary-row">
+                <span>Platform Fee (5%)</span>
+                <span id="serviceFee">$0.00</span>
+              </div>
+              <div class="summary-row">
+                <span>Security Deposit</span>
+                <span id="summaryDeposit">$0.00</span>
+              </div>
+              <div class="summary-row total">
+                <span>Total Due</span>
+                <span id="totalDue">$0.00</span>
+              </div>
+            </div>
+
+            <button type="submit" id="bookBtn" class="btn btn-primary">Request to Book</button>
+          </form>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE_URL = window.location.origin.includes(":8000") ? "" : "http://127.0.0.1:8000";
+    const urlParams = new URLSearchParams(window.location.search);
+    const listingId = urlParams.get("id");
+
+    const token = localStorage.getItem("access_token");
+    const rawTokenType = localStorage.getItem("token_type") || "bearer";
+    const tokenType = rawTokenType.charAt(0).toUpperCase() + rawTokenType.slice(1).toLowerCase();
+
+    let currentListing = null;
+    let computedTotalPayable = 0;
+    const placeholderImg = "https://images.unsplash.com/photo-1581235720704-06d3acfcb36f?w=600&auto=format&fit=crop&q=80";
+
+    // 1. Load Listing Details
+    async function loadListingDetails() {
+      if (!listingId) {
+        document.getElementById("loading").innerText = "Listing ID missing in URL parameters.";
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/listings/${listingId}`);
+        if (!res.ok) throw new Error("Listing not found.");
+
+        currentListing = await res.json();
+        renderDetails(currentListing);
+        loadReviews(listingId);
+      } catch (err) {
+        document.getElementById("loading").innerText = err.message;
+      }
+    }
+
+    function renderDetails(item) {
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("listingContainer").style.display = "grid";
+
+      document.getElementById("listingTitle").innerText = item.title;
+      document.getElementById("categoryBadge").innerText = item.category || "General";
+      document.getElementById("listingLocation").innerText = `📍 ${item.geo_location || "Location not disclosed"}`;
+      document.getElementById("listingDescription").innerText = item.description || "No description provided.";
+      if (item.item_rules) {
+        document.getElementById("listingRules").innerText = item.item_rules;
+      }
+
+      const daily = parseFloat(item.rental_rate_daily || 0);
+      const hourly = parseFloat(item.rental_rate_hourly || 0);
+      const deposit = parseFloat(item.security_deposit || 0);
+
+      document.getElementById("dailyRateDisplay").innerText = `$${daily.toFixed(2)}`;
+      document.getElementById("summaryDeposit").innerText = `$${deposit.toFixed(2)}`;
+      document.getElementById("depositDisplay").innerText = `$${deposit.toFixed(2)}`;
+
+      if (hourly > 0) {
+        document.getElementById("hourlyRateRow").style.display = "flex";
+        document.getElementById("hourlyRateDisplay").innerText = `$${hourly.toFixed(2)}`;
+      }
+
+      let allImages = [];
+      if (item.primary_image) allImages.push(item.primary_image);
+      if (Array.isArray(item.gallery)) allImages.push(...item.gallery);
+      if (allImages.length === 0 && Array.isArray(item.images)) {
+        allImages = item.images.map(img => img.image_file_url);
+      }
+      if (allImages.length === 0) allImages.push(placeholderImg);
+
+      const mainImg = document.getElementById("mainImage");
+      mainImg.src = allImages[0];
+
+      const thumbBar = document.getElementById("thumbnailsBar");
+      thumbBar.innerHTML = allImages.map((src, i) => `
+        <img src="${src}" class="thumb ${i === 0 ? 'active' : ''}" onclick="switchImg(this, '${src}')" />
+      `).join("");
+    }
+
+    function switchImg(el, src) {
+      document.getElementById("mainImage").src = src;
+      document.querySelectorAll(".thumb").forEach(t => t.classList.remove("active"));
+      el.classList.add("active");
+    }
+
+    // 2. Price Calculation (mirrors server calculations)
+    const startInput = document.getElementById("startDate");
+    const endInput = document.getElementById("endDate");
+
+    function calculateTotal() {
+      if (!startInput.value || !endInput.value || !currentListing) return;
+
+      const start = new Date(startInput.value);
+      const end = new Date(endInput.value);
+      const diffMs = end - start;
+
+      if (diffMs <= 0) {
+        document.getElementById("durationDays").innerText = "Invalid date range";
+        computedTotalPayable = 0;
+        return;
+      }
+
+      const totalHours = diffMs / (1000 * 60 * 60);
+      const days = Math.floor(totalHours / 24);
+      const hours = Math.ceil(totalHours % 24);
+
+      const rateDaily = parseFloat(currentListing.rental_rate_daily || 0);
+      const rateHourly = parseFloat(currentListing.rental_rate_hourly || 0);
+      const deposit = parseFloat(currentListing.security_deposit || 0);
+
+      const baseRentalCost = (rateDaily * days) + (rateHourly * hours);
+      const serviceFee = parseFloat((baseRentalCost * 0.05).toFixed(2));
+      computedTotalPayable = parseFloat((baseRentalCost + deposit + serviceFee).toFixed(2));
+
+      let durationLabel = "";
+      if (days > 0) durationLabel += `${days} day${days > 1 ? 's' : ''} `;
+      if (hours > 0) durationLabel += `${hours} hr${hours > 1 ? 's' : ''}`;
+      if (!durationLabel) durationLabel = "0 hrs";
+
+      document.getElementById("durationDays").innerText = durationLabel;
+      document.getElementById("estimatedRent").innerText = `$${baseRentalCost.toFixed(2)}`;
+      document.getElementById("serviceFee").innerText = `$${serviceFee.toFixed(2)}`;
+      document.getElementById("totalDue").innerText = `$${computedTotalPayable.toFixed(2)}`;
+    }
+
+    startInput.addEventListener("change", calculateTotal);
+    endInput.addEventListener("change", calculateTotal);
+
+    // 3. Booking Submission (includes listing_id and rental_cost to satisfy schema.BookingCreate)
+    document.getElementById("bookingForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const alertBox = document.getElementById("bookingAlert");
+      const btn = document.getElementById("bookBtn");
+
+      alertBox.style.display = "none";
+
+      if (!token) {
+        alertBox.className = "alert alert-error";
+        alertBox.innerText = "Please log in first to book this listing.";
+        alertBox.style.display = "block";
+        setTimeout(() => { window.location.href = "login.html"; }, 1500);
+        return;
+      }
+
+      calculateTotal();
+
+      btn.disabled = true;
+      btn.innerText = "Placing request...";
+
+      const payload = {
+        listing_id: listingId,
+        rental_cost: computedTotalPayable,
+        start_period: new Date(startInput.value).toISOString(),
+        end_period: new Date(endInput.value).toISOString()
+      };
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/booking/${listingId}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `${tokenType} ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.status === 401) {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("token_type");
+          throw new Error("Session expired. Please log in again.");
+        }
+
+        const data = await res.json();
+        if (!res.ok) {
+          let errDetail = data.detail || "Unable to place booking request.";
+          if (Array.isArray(errDetail)) {
+            errDetail = errDetail.map(d => `${d.loc[d.loc.length - 1]}: ${d.msg}`).join(", ");
+          }
+          throw new Error(errDetail);
+        }
+
+        alertBox.className = "alert alert-success";
+        alertBox.innerText = "Booking request placed successfully! Redirecting to dashboard...";
+        alertBox.style.display = "block";
+
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 1200);
+
+      } catch (err) {
+        alertBox.className = "alert alert-error";
+        alertBox.innerText = err.message;
+        alertBox.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Request to Book";
+      }
+    });
+
+    // 4. Load Listing Reviews
+    async function loadReviews(id) {
+      const container = document.getElementById("reviewsList");
+      try {
+        const res = await fetch(`${API_BASE_URL}/listings/${id}/reviews`);
+        if (!res.ok) return;
+        const reviews = await res.json();
+
+        if (!reviews || reviews.length === 0) return;
+
+        container.innerHTML = reviews.map(r => `
+          <div class="review-item">
+            <div class="review-header">
+              <span class="review-stars">${"★".repeat(r.rating || 5)}${"☆".repeat(5 - (r.rating || 5))}</span>
+              <span style="color: var(--text-muted);">${r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}</span>
+            </div>
+            <p style="font-size: 14px; color: #334155;">${r.comment || "No comment."}</p>
+          </div>
+        `).join("");
+      } catch (e) {
+        // Soft fail
+      }
+    }
+
+    loadListingDetails();
+  </script>
+</body>
+</html>

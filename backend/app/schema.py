@@ -114,9 +114,11 @@ class BookingBase(BaseModel):
     deposit_held: Optional[Decimal] = 0.00
     # service_fee: Optional[Decimal] = 50.00
 
-class BookingCreate(BookingBase):
-    listing_id: str
-
+class BookingCreate(BaseModel):
+    start_period: datetime
+    end_period: datetime
+    listing_id: Optional[str] = None
+    rental_cost: Optional[Decimal] = None
 class BookingResponse(BookingBase):
     booking_id: str
     listing_id: str

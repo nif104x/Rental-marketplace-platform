@@ -75,3 +75,16 @@ def get_messages(
     ).order_by(model.Message.timestamp.asc()).all()
 
     return messages # tutul tomar current user id lagle /me endpoint call korba
+
+@router.get("")
+@router.get("/")
+def get_user_conversations(
+    current_user: model.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    return db.query(model.Conversation).filter(
+        or_(
+            model.Conversation.lessor_id == current_user.user_id,
+            model.Conversation.lessee_id == current_user.user_id
+        )
+    ).order_by(model.Conversation.last_message_at.desc()).all()

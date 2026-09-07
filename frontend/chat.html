@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Messages - RentHub</title>
+  <style>
+    :root {
+      --primary: #0066ff;
+      --primary-hover: #0052cc;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --bubble-me: #0066ff;
+      --bubble-them: #f1f5f9;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Navbar */
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .nav-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-outline {
+      border-color: var(--border);
+      background: transparent;
+      color: var(--text-main);
+    }
+    .btn-outline:hover { background: #f1f5f9; }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+
+    /* Main Chat Workspace */
+    .chat-layout {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      flex: 1;
+      height: calc(100vh - 61px);
+      background: var(--card-bg);
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+    }
+
+    /* Sidebar: Room List */
+    .rooms-sidebar {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: var(--card-bg);
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .search-box {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      background: var(--bg);
+    }
+
+    .search-box:focus {
+      border-color: var(--primary);
+    }
+
+    .room-list {
+      flex: 1;
+      overflow-y: auto;
+      list-style: none;
+    }
+
+    .room-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .room-item:hover {
+      background: var(--bg);
+    }
+
+    .room-item.active {
+      background: #eff6ff;
+      border-left: 4px solid var(--primary);
+    }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #dbeafe;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .room-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .room-top {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .room-name {
+      font-weight: 700;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .room-time {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .room-snippet {
+      font-size: 13px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Right: Active Chat Area */
+    .chat-view {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: #ffffff;
+    }
+
+    .chat-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--card-bg);
+    }
+
+    .chat-title-info h2 {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .chat-title-info p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Message Stream */
+    .message-stream {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: var(--bg);
+    }
+
+    .bubble-wrapper {
+      display: flex;
+      flex-direction: column;
+      max-width: 68%;
+    }
+
+    .bubble-wrapper.me {
+      align-self: flex-end;
+      align-items: flex-end;
+    }
+
+    .bubble-wrapper.them {
+      align-self: flex-start;
+      align-items: flex-start;
+    }
+
+    .bubble {
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .me .bubble {
+      background: var(--bubble-me);
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .them .bubble {
+      background: var(--bubble-them);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .bubble-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      padding: 0 4px;
+    }
+
+    /* Input Bar */
+    .chat-input-area {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--card-bg);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .chat-input-area input {
+      flex: 1;
+      padding: 11px 16px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      font-size: 14px;
+      outline: none;
+      background: var(--bg);
+    }
+
+    .chat-input-area input:focus {
+      border-color: var(--primary);
+      background: #ffffff;
+    }
+
+    .chat-input-area button {
+      padding: 10px 20px;
+      border-radius: 20px;
+    }
+
+    /* Empty state */
+    .no-chat-selected {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      gap: 8px;
+    }
+
+    .no-chat-selected span {
+      font-size: 38px;
+    }
+
+    @media (max-width: 768px) {
+      .chat-layout {
+        grid-template-columns: 1fr;
+      }
+      .chat-view {
+        display: none;
+      }
+      .chat-layout.mobile-active .rooms-sidebar {
+        display: none;
+      }
+      .chat-layout.mobile-active .chat-view {
+        display: flex;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="brand">📦 RentHub</a>
+      <div class="nav-actions">
+        <a href="index.html" class="btn btn-outline">Catalog</a>
+        <a href="dashboard.html" class="btn btn-outline">Dashboard</a>
+        <button class="btn btn-outline" onclick="logout()">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="chat-layout" id="chatLayout">
+    <!-- Sidebar: Chatrooms List -->
+    <aside class="rooms-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">Conversations</div>
+        <input type="text" class="search-box" id="roomSearchInput" placeholder="Filter conversations..." oninput="filterRooms()" />
+      </div>
+      <ul class="room-list" id="roomList">
+        <li style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">
+          Loading conversations...
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Right: Active Chat Window -->
+    <section class="chat-view" id="chatView">
+      <div class="no-chat-selected" id="noChatSelected">
+        <span>💬</span>
+        <h3>Select a conversation</h3>
+        <p>Choose a chat from the sidebar to view messages or negotiate rentals.</p>
+      </div>
+
+      <div id="activeChatWrapper" style="display: none; height: 100%; flex-direction: column;">
+        <div class="chat-header">
+          <div class="chat-title-info">
+            <h2 id="currentChatRecipient">Recipient</h2>
+            <p id="currentChatSub">Conversation details</p>
+          </div>
+          <div>
+            <button class="btn btn-outline" style="display: none;" id="backToRoomsBtn" onclick="backToRooms()">Back</button>
+          </div>
+        </div>
+
+        <div class="message-stream" id="messageStream"></div>
+
+        <form class="chat-input-area" id="messageForm">
+          <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" required />
+          <button type="submit" class="btn btn-primary" id="sendBtn">Send</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE_URL = "http://127.0.0.1:8000";
+
+    // 1. Strict JWT Session Authentication Verification
+    const token = localStorage.getItem("access_token");
+    const rawTokenType = localStorage.getItem("token_type") || "bearer";
+    const tokenType = rawTokenType.charAt(0).toUpperCase() + rawTokenType.slice(1).toLowerCase();
+
+    if (!token) {
+      window.location.href = "login.html";
+    }
+
+    const authHeaders = {
+      "Content-Type": "application/json",
+      "Authorization": `${tokenType} ${token}`
+    };
+
+    function logout() {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("token_type");
+      window.location.href = "login.html";
+    }
+
+    function checkAuthError(res) {
+      if (res.status === 401) {
+        logout();
+        throw new Error("Session expired. Redirecting to login...");
+      }
+    }
+
+    // 2. State & References
+    let allRooms = [];
+    let currentConversationId = null;
+    let pollInterval = null;
+    let myUserId = null;
+
+    // 3. Identify Current User to align left/right speech bubbles
+    async function resolveCurrentUserId() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/user/me`, { headers: authHeaders });
+        if (res.ok) {
+          const user = await res.json();
+          myUserId = user.user_id;
+        }
+      } catch (e) {
+        // Soft fallback
+      }
+    }
+
+    // 4. Fetch All Conversations (Chatrooms)
+    async function loadConversations() {
+      const roomListEl = document.getElementById("roomList");
+
+      try {
+        // Dual-check for route aliases (/conversation or /conversations)
+        let res = await fetch(`${API_BASE_URL}/conversation/`, { headers: authHeaders });
+        if (res.status === 404) {
+          res = await fetch(`${API_BASE_URL}/conversations/`, { headers: authHeaders });
+        }
+
+        checkAuthError(res);
+
+        if (!res.ok) throw new Error("Could not retrieve conversation threads.");
+
+        const data = await res.json();
+        allRooms = Array.isArray(data) ? data : (data.items || []);
+        renderRooms(allRooms);
+
+        // Auto-select if query param exists (?id=... or ?conversation_id=...)
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoRoomId = urlParams.get("conversation_id") || urlParams.get("id");
+        if (autoRoomId) {
+          const matched = allRooms.find(r => (r.conversation_id || r.id) == autoRoomId);
+          if (matched) {
+            selectRoom(matched);
+          }
+        }
+      } catch (err) {
+        roomListEl.innerHTML = `<li style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">${err.message}</li>`;
+      }
+    }
+
+    function renderRooms(rooms) {
+      const roomListEl = document.getElementById("roomList");
+
+      if (rooms.length === 0) {
+        roomListEl.innerHTML = `
+          <li style="padding: 32px 16px; text-align: center; color: var(--text-muted); font-size: 13px;">
+            No conversations yet.<br />Inquire about a rental to start chatting!
+          </li>
+        `;
+        return;
+      }
+
+      roomListEl.innerHTML = rooms.map(room => {
+        const id = room.conversation_id || room.id;
+        const title = room.title || room.counterparty_name || `Chat #${id.substring(0, 8)}`;
+        const initial = title.charAt(0).toUpperCase();
+        const snippet = room.last_message || room.latest_message || "No messages yet";
+        const time = room.updated_at ? new Date(room.updated_at).toLocaleDateString() : "";
+        const isActive = id === currentConversationId ? "active" : "";
+
+        return `
+          <li class="room-item ${isActive}" onclick="selectRoomById('${id}')" id="room-${id}">
+            <div class="avatar">${initial}</div>
+            <div class="room-details">
+              <div class="room-top">
+                <span class="room-name">${title}</span>
+                <span class="room-time">${time}</span>
+              </div>
+              <div class="room-snippet">${snippet}</div>
+            </div>
+          </li>
+        `;
+      }).join("");
+    }
+
+    function filterRooms() {
+      const query = document.getElementById("roomSearchInput").value.toLowerCase();
+      const filtered = allRooms.filter(r => {
+        const title = (r.title || r.counterparty_name || "").toLowerCase();
+        const snippet = (r.last_message || "").toLowerCase();
+        return title.includes(query) || snippet.includes(query);
+      });
+      renderRooms(filtered);
+    }
+
+    // 5. Select & Open a Chatroom
+    function selectRoomById(id) {
+      const room = allRooms.find(r => (r.conversation_id || r.id) == id);
+      if (room) selectRoom(room);
+    }
+
+    function selectRoom(room) {
+      currentConversationId = room.conversation_id || room.id;
+
+      // Update room selection UI
+      document.querySelectorAll(".room-item").forEach(el => el.classList.remove("active"));
+      const activeEl = document.getElementById(`room-${currentConversationId}`);
+      if (activeEl) activeEl.classList.add("active");
+
+      document.getElementById("noChatSelected").style.display = "none";
+      const wrapper = document.getElementById("activeChatWrapper");
+      wrapper.style.display = "flex";
+
+      const title = room.title || room.counterparty_name || `Chat #${currentConversationId.substring(0, 8)}`;
+      document.getElementById("currentChatRecipient").innerText = title;
+      document.getElementById("currentChatSub").innerText = room.listing_title ? `Rental Inquiry: ${room.listing_title}` : "Direct Message Thread";
+
+      // Mobile responsive toggle
+      if (window.innerWidth <= 768) {
+        document.getElementById("chatLayout").classList.add("mobile-active");
+        document.getElementById("backToRoomsBtn").style.display = "inline-flex";
+      }
+
+      loadMessages(currentConversationId);
+
+      // Start automatic polling every 3.5s for fresh messages
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(() => loadMessages(currentConversationId, true), 3500);
+    }
+
+    function backToRooms() {
+      document.getElementById("chatLayout").classList.remove("mobile-active");
+      if (pollInterval) clearInterval(pollInterval);
+    }
+
+    // 6. Fetch Stream of Messages
+    async function loadMessages(conversationId, isSilentPolling = false) {
+      const stream = document.getElementById("messageStream");
+
+      try {
+        let res = await fetch(`${API_BASE_URL}/conversation/${conversationId}/messages`, { headers: authHeaders });
+        if (res.status === 404) {
+          res = await fetch(`${API_BASE_URL}/conversation/${conversationId}`, { headers: authHeaders });
+        }
+
+        checkAuthError(res);
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const messages = Array.isArray(data) ? data : (data.messages || []);
+
+        // Avoid redraw jitter during silent polling if counts match
+        if (isSilentPolling && stream.dataset.count == messages.length) return;
+
+        stream.dataset.count = messages.length;
+
+        if (messages.length === 0) {
+          stream.innerHTML = `<div style="text-align:center; padding: 30px; color: var(--text-muted); font-size: 13px;">No messages here yet. Say hello!</div>`;
+          return;
+        }
+
+        stream.innerHTML = messages.map(msg => {
+          const senderId = msg.sender_id || msg.user_id;
+          const isMe = myUserId ? (senderId === myUserId) : (msg.is_me === true);
+          const time = msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "";
+
+          return `
+            <div class="bubble-wrapper ${isMe ? 'me' : 'them'}">
+              <div class="bubble">${escapeHtml(msg.message_body || msg.content || msg.text || "")}</div>
+              <span class="bubble-time">${time}</span>
+            </div>
+          `;
+        }).join("");
+
+        // Auto-scroll to bottom of conversation
+        stream.scrollTop = stream.scrollHeight;
+      } catch (e) {
+        if (!isSilentPolling) {
+          stream.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--text-muted);">${e.message}</div>`;
+        }
+      }
+    }
+
+    // 7. Send Message Handler
+    document.getElementById("messageForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!currentConversationId) return;
+
+      const input = document.getElementById("messageInput");
+      const sendBtn = document.getElementById("sendBtn");
+      const text = input.value.trim();
+      if (!text) return;
+
+      sendBtn.disabled = true;
+
+      const payload = {
+        message_body: text,
+        content: text // Accommodates both common schema naming keys
+      };
+
+      try {
+        let res = await fetch(`${API_BASE_URL}/conversation/${currentConversationId}/messages`, {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify(payload)
+        });
+
+        if (res.status === 404) {
+          res = await fetch(`${API_BASE_URL}/conversation/${currentConversationId}/message`, {
+            method: "POST",
+            headers: authHeaders,
+            body: JSON.stringify(payload)
+          });
+        }
+
+        checkAuthError(res);
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || "Failed to send message.");
+        }
+
+        input.value = "";
+        await loadMessages(currentConversationId);
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    });
+
+    function escapeHtml(string) {
+      const div = document.createElement("div");
+      div.innerText = string;
+      return div.innerHTML;
+    }
+
+    // Initialize
+    resolveCurrentUserId();
+    loadConversations();
+  </script>
+</body>
+</html>

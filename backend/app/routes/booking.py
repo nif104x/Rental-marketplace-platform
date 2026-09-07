@@ -200,3 +200,14 @@ def reject_and_delete_booking(
         "booking_id": booking_id,
         "notification_type": ntf.type
     }
+
+
+@router.get("/my-rentals")
+def get_lessee_rentals(
+    current_user: model.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    bookings = db.query(model.Booking).filter(
+        model.Booking.lessee_id == current_user.user_id
+    ).all()
+    return bookings

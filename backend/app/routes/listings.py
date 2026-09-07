@@ -17,19 +17,57 @@ from pathlib import Path
 
 router = APIRouter(prefix="/listings", tags=["listings"])
 
+APP_DIR = Path(__file__).resolve().parent.parent
+UPLOAD_DIR = APP_DIR / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-UPLOAD_DIR = BASE_DIR / "uploads"
+# Helper function
+def format_listing_with_images(listing: model.Listing) -> dict:
+    primary_image = None
+    gallery = []
 
+    for img in listing.images:
+        if img.is_primary_preview and primary_image is None:
+            primary_image = img.image_file_url
+        else:
+            gallery.append(img.image_file_url)
+
+    if not primary_image and gallery:
+        primary_image = gallery.pop(0)
+
+    return {
+        "listing_id": listing.listing_id,
+        "lessor_id": listing.lessor_id,
+        "title": listing.title,
+        "description": listing.description,
+        "category": listing.category,
+        "rental_rate_hourly": listing.rental_rate_hourly,
+        "rental_rate_daily": listing.rental_rate_daily,
+        "rental_rate_weekly": listing.rental_rate_weekly,
+        "security_deposit": listing.security_deposit,
+        "geo_location": listing.geo_location,
+        "status": listing.status,
+        "primary_image": primary_image,
+        "gallery": gallery
+    }
+
+# --- 1. Creation & Mutation Routes ---
+
+@router.post("")
+@router.post("/")
 @router.post("/createListing")
-def creategig(data:schema.ListingCreate, current_user: model.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+def creategig(
+    data: schema.ListingCreate, 
+    current_user: model.User = Depends(auth.get_current_user), 
+    db: Session = Depends(get_db)
+):
     lst_id = f"LST-{uuid.uuid4().hex[:6].upper()}"
     lst = model.Listing(
         listing_id = lst_id,
         lessor_id = current_user.user_id,
         title = data.title,
         description = data.description,
-        category= data.category,
+        category = data.category,
         rental_rate_hourly = data.rental_rate_hourly,
         rental_rate_daily = data.rental_rate_daily,
         rental_rate_weekly = data.rental_rate_weekly,
@@ -46,9 +84,9 @@ def creategig(data:schema.ListingCreate, current_user: model.User = Depends(auth
     db.refresh(lst)
     return {
         "message": "Listing created successfully",
-        "lst_id": lst.lst_id
+        "listing_id": lst.listing_id,
+        "lst_id": lst.listing_id
     }
-
 
 @router.post("/upload-image")
 def upload_image(
@@ -57,10 +95,7 @@ def upload_image(
     db: Session = Depends(get_db)
 ):
     image_id = f"IMG-{uuid.uuid4().hex[:6].upper()}"
-
-    ext = image.filename.split(".")[-1].lower()
-
-    os.makedirs("uploads", exist_ok=True)
+    ext = image.filename.split(".")[-1].lower() if "." in image.filename else "jpg"
 
     file_path = UPLOAD_DIR / f"{image_id}.{ext}"
 
@@ -85,11 +120,13 @@ def upload_image(
         "image_url": image_file_url
     }
 
-# tutul eikhan e age listing save korle listing id paiba oita deya pore image save koiro. 
-# ekloge er logic ta vaiba paitasilam na. me noob :,)
-
 @router.patch("/editlisting/{listing_id}")
-def editListing(listing_id: str, data: schema.ListingUpdate, current_user: model.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+def editListing(
+    listing_id: str, 
+    data: schema.ListingUpdate, 
+    current_user: model.User = Depends(auth.get_current_user), 
+    db: Session = Depends(get_db)
+):
     lst = db.query(model.Listing).filter(model.Listing.listing_id == listing_id).first()
     
     if not lst:
@@ -117,74 +154,57 @@ def deleteListing(
     current_user: model.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    lst = db.query(model.Listing).filter(
-        model.Listing.listing_id == listing_id
-    ).first()
+    lst = db.query(model.Listing).filter(model.Listing.listing_id == listing_id).first()
 
     if not lst:
         raise HTTPException(status_code=404, detail="Listing not found")
 
     if lst.lessor_id != current_user.user_id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to delete this listing"
-        )
+        raise HTTPException(status_code=403, detail="Not authorized to delete this listing")
 
-    db.delete(lst) # maybe in future i will delete the image file manually by code hehe!
+    db.delete(lst)
     db.commit()
 
-    return {
-        "message": "Listing deleted successfully"
-    }
+    return {"message": "Listing deleted successfully"}
 
-def format_listing_with_images(listing: model.Listing) -> dict:
-    primary_image = None
-    gallery = []
+# --- 2. Static GET Endpoints (MUST COME BEFORE /{listing_id}) ---
 
-    for img in listing.images:
-        if img.is_primary_preview and primary_image is None:
-            primary_image = img.image_file_url
-        else:
-            gallery.append(img.image_file_url)
-
-    # Fallback: if no image was flagged as primary, use the first available image
-    if not primary_image and gallery:
-        primary_image = gallery.pop(0)
-
-    return {
-        "listing_id": listing.listing_id,
-        "lessor_id": listing.lessor_id,
-        "title": listing.title,
-        "description": listing.description,
-        "category": listing.category,
-        "rental_rate_hourly": listing.rental_rate_hourly,
-        "rental_rate_daily": listing.rental_rate_daily,
-        "rental_rate_weekly": listing.rental_rate_weekly,
-        "security_deposit": listing.security_deposit,
-        "geo_location": listing.geo_location,
-        "status": listing.status,
-        "primary_image": primary_image,
-        "gallery": gallery
-    }
-
-
-# 1. Fetch listing details with cleanly formatted images
-@router.get("/listings/{listing_id}", response_model=schema.ListingOut)
-def get_listing_detail(listing_id: str, db: Session = Depends(get_db)):
-    listing = (
+@router.get("/my-listings")
+def get_my_listings(
+    current_user: model.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    listings = (
         db.query(model.Listing)
         .options(joinedload(model.Listing.images))
-        .filter(model.Listing.listing_id == listing_id)
-        .first()
+        .filter(model.Listing.lessor_id == current_user.user_id)
+        .all()
     )
-    if not listing:
-        raise HTTPException(status_code=404, detail="Listing not found")
+    return [format_listing_with_images(l) for l in listings]
 
-    return format_listing_with_images(listing)
+CATEGORIES = [
+    "electronics", "tools", "events", "outdoor", "sports", 
+    "music", "vehicles", "appliances", "apparel", "baby", "books"
+]
 
+@router.get("/categories", response_model=list[str])
+def get_categories():
+    return CATEGORIES
 
-# 2. Dedicated separate images endpoint (for gallery modals or sliders)
-@router.get("/listings/{listing_id}/images", response_model=schema.ListingImagesOut)
+@router.get("", response_model=list[schema.ListingOut])
+@router.get("/", response_model=list[schema.ListingOut])
+def get_all_listings(db: Session = Depends(get_db)):
+    listings = (
+        db.query(model.Listing)
+        .options(joinedload(model.Listing.images))
+        .filter(model.Listing.status == "Active")
+        .all()
+    )
+    return [format_listing_with_images(l) for l in listings]
+
+# --- 3. Dynamic Endpoints Using Parameter /{listing_id} ---
+
+@router.get("/{listing_id}/images", response_model=schema.ListingImagesOut)
 def get_listing_images_only(listing_id: str, db: Session = Depends(get_db)):
     images = (
         db.query(model.Image)
@@ -205,8 +225,7 @@ def get_listing_images_only(listing_id: str, db: Session = Depends(get_db)):
         "gallery": gallery
     }
 
-
-@router.get("/{listing_id}/lessee") # tutul eilhan theika current keda nise oita paiba
+@router.get("/{listing_id}/lessee")
 def get_listing_lessee_details(
     listing_id: str,
     current_user: model.User = Depends(auth.get_current_user),
@@ -241,10 +260,7 @@ def get_listing_lessee_details(
     }
 
 @router.get("/{listing_id}/reviews")
-def get_listing_reviews(
-    listing_id: str,
-    db: Session = Depends(get_db)
-):
+def get_listing_reviews(listing_id: str, db: Session = Depends(get_db)):
     lst = db.query(model.Listing).filter(model.Listing.listing_id == listing_id).first()
     if not lst:
         raise HTTPException(status_code=404, detail="Listing not found")
@@ -255,28 +271,15 @@ def get_listing_reviews(
 
     return reviews
 
+@router.get("/{listing_id}", response_model=schema.ListingOut)
+def get_listing_detail(listing_id: str, db: Session = Depends(get_db)):
+    listing = (
+        db.query(model.Listing)
+        .options(joinedload(model.Listing.images))
+        .filter(model.Listing.listing_id == listing_id)
+        .first()
+    )
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
 
-
-CATEGORIES = [
-    "electronics",
-    "tools",
-    "events",
-    "outdoor",
-    "sports",
-    "music",
-    "vehicles",
-    "appliances",
-    "apparel",
-    "baby",
-    "books"
-]
-
-@router.get("/categories", response_model=list[str])
-def get_categories():
-    return CATEGORIES
-
-
-
-@router.get("/test")
-def test():
-    return {"ola":"amigo"}
+    return format_listing_with_images(listing)

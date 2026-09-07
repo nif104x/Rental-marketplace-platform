@@ -86,17 +86,21 @@ def create_review(
         "review_id": rev.review_id
     }
 
-# @router.get("/listings/{listing_id}/reviews")
-# def get_listing_reviews(
-#     listing_id: str,
-#     db: Session = Depends(get_db)
-# ):
-#     lst = db.query(model.Listing).filter(model.Listing.listing_id == listing_id).first()
-#     if not lst:
-#         raise HTTPException(status_code=404, detail="Listing not found")
+@router.get("/my-reviews")
+def get_my_reviews(
+    current_user: model.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    return db.query(model.Review).filter(
+        or_(
+            model.Review.target_user_id == current_user.user_id,
+            model.Review.reviewer_id == current_user.user_id
+        )
+    ).all()
 
-#     reviews = db.query(model.Review).filter(
-#         model.Review.target_listing_id == listing_id
-#     ).all()
 
-#     return reviews
+@router.get("/user/{user_id}")
+def get_user_reviews(user_id: str, db: Session = Depends(get_db)):
+    return db.query(model.Review).filter(
+        model.Review.target_user_id == user_id
+    ).all()

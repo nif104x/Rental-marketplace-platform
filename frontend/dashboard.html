@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Control Center - RentHub</title>
+  <style>
+    :root {
+      --primary: #0066ff;
+      --primary-hover: #0052cc;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Top Nav */
+    header { background: var(--card-bg); border-bottom: 1px solid var(--border); z-index: 50; flex-shrink: 0; }
+    .nav-container { max-width: 1600px; margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { font-size: 20px; font-weight: 800; color: var(--primary); text-decoration: none; }
+    .nav-actions { display: flex; gap: 10px; align-items: center; }
+
+    .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; border: 1px solid transparent; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s ease; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-outline { border-color: var(--border); background: transparent; color: var(--text-main); }
+    .btn-outline:hover { background: #f1f5f9; }
+    .btn-success { background: #dcfce7; color: var(--success); border-color: #86efac; }
+    .btn-danger { background: #fee2e2; color: var(--danger); border-color: #fca5a5; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    /* Main Workspace Layout: Sidebar + Active Window */
+    .workspace-layout { display: flex; flex: 1; height: calc(100vh - 61px); max-width: 1600px; margin: 0 auto; width: 100%; overflow: hidden; }
+
+    /* Left Window Navigator */
+    .sidebar { width: 260px; background: var(--card-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px 12px; gap: 4px; overflow-y: auto; flex-shrink: 0; }
+    .nav-category-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px 4px; }
+    
+    .nav-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 8px; font-size: 13.5px; font-weight: 600; color: var(--text-muted); cursor: pointer; border: none; background: transparent; width: 100%; text-align: left; transition: all 0.15s ease; }
+    .nav-item:hover { background: var(--bg); color: var(--text-main); }
+    .nav-item.active { background: #eff6ff; color: var(--primary); }
+    .badge-counter { background: #e2e8f0; color: #334155; font-size: 11px; padding: 2px 7px; border-radius: 12px; font-weight: 700; }
+    .nav-item.active .badge-counter { background: #dbeafe; color: var(--primary); }
+
+    /* Center Active Window Panel */
+    .window-container { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 24px 32px; background: var(--bg); }
+    .window-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .window-title { font-size: 20px; font-weight: 800; }
+    
+    /* Content Cards & Tables */
+    .window-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.02); margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13.5px; }
+    th { background: #f8fafc; padding: 12px 16px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+
+    /* Badges */
+    .status-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: capitalize; }
+    .pill-pending { background: #fef3c7; color: #b45309; }
+    .pill-active, .pill-completed { background: #dcfce7; color: #15803d; }
+    .pill-rejected { background: #fee2e2; color: #b91c1c; }
+
+    /* Grid cards for Wishlist and Search */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; }
+    .item-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
+    .item-img { width: 100%; height: 150px; object-fit: cover; background: #e2e8f0; }
+    .item-card-body { padding: 14px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+
+    /* Live Chat Window Component */
+    .chat-window { display: grid; grid-template-columns: 280px 1fr; border: 1px solid var(--border); border-radius: var(--radius); height: 580px; background: #fff; overflow: hidden; }
+    .chat-sidebar { border-right: 1px solid var(--border); overflow-y: auto; }
+    .chat-room-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .chat-room-item.active { background: #eff6ff; border-left: 3px solid var(--primary); }
+    .chat-content { display: flex; flex-direction: column; height: 100%; }
+    .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: #f8fafc; }
+    .chat-msg { max-width: 70%; padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.4; word-break: break-word; }
+    .chat-msg.me { align-self: flex-end; background: var(--primary); color: #fff; }
+    .chat-msg.them { align-self: flex-start; background: #e2e8f0; color: #0f172a; }
+    .chat-input-bar { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: #fff; }
+    .chat-input-bar input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; outline: none; }
+
+    /* Interactive Functional Modals (Edit Listing / Write Review / Search) */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: #fff; border-radius: var(--radius); width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13.5px; outline: none; }
+
+    .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .alert-error { background: #fee2e2; color: #b91c1c; }
+    .alert-success { background: #dcfce7; color: #15803d; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="brand">📦 RentHub Dashboard</a>
+      <div class="nav-actions">
+        <button class="btn btn-outline" onclick="openSearchWindow()">🔍 Search Rentals</button>
+        <a href="create-listing.html" class="btn btn-primary">+ Post Listing</a>
+        <button class="btn btn-outline" onclick="logout()">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="workspace-layout">
+    <!-- Left Navigation Sidebar -->
+    <aside class="sidebar">
+      <div class="nav-category-title">Equipment Owner</div>
+      <button class="nav-item active" onclick="showWindow('listings')">
+        <span>📦 My Listings</span>
+        <span class="badge-counter" id="cntListings">0</span>
+      </button>
+      <button class="nav-item" onclick="showWindow('requests')">
+        <span>📥 Booking Requests</span>
+        <span class="badge-counter" id="cntRequests">0</span>
+      </button>
+
+      <div class="nav-category-title" style="margin-top: 10px;">Renter Activity</div>
+      <button class="nav-item" onclick="showWindow('rentals')">
+        <span>🔑 My Rentals</span>
+        <span class="badge-counter" id="cntRentals">0</span>
+      </button>
+      <!-- <button class="nav-item" onclick="showWindow('wishlist')">
+        <span>❤️ Saved Wishlist</span>
+        <span class="badge-counter" id="cntWishlist">0</span>
+      </button> -->
+
+      <div class="nav-category-title" style="margin-top: 10px;">Communication & Trust</div>
+      <button class="nav-item" onclick="showWindow('chats')">
+        <span>💬 Messages / Chats</span>
+        <span class="badge-counter" id="cntChats">0</span>
+      </button>
+      <button class="nav-item" onclick="showWindow('reviews')">
+        <span>⭐ My Reviews</span>
+        <span class="badge-counter" id="cntReviews">0</span>
+      </button>
+      <button class="nav-item" onclick="showWindow('notifications')">
+        <span>🔔 Notifications</span>
+        <span class="badge-counter" id="cntNotifications">0</span>
+      </button>
+    </aside>
+
+    <!-- Main Dynamic Window Display -->
+    <main class="window-container">
+      <div id="statusAlert" class="alert"></div>
+
+      <!-- 1. MY LISTINGS WINDOW -->
+      <section id="winListings">
+        <div class="window-header">
+          <div class="window-title">My Equipment Listings</div>
+          <a href="create-listing.html" class="btn btn-primary btn-sm">+ Add New Listing</a>
+        </div>
+        <div class="window-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Listing ID</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Daily Rate</th>
+                <th>Status</th>
+                <th>Window Actions</th>
+              </tr>
+            </thead>
+            <tbody id="listingsTbody">
+              <tr><td colspan="6" style="text-align:center; padding: 24px;">Loading listings...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 2. BOOKING REQUESTS WINDOW (LESSOR DECISIONS) -->
+      <section id="winRequests" style="display: none;">
+        <div class="window-header">
+          <div class="window-title">Incoming Booking Requests</div>
+        </div>
+        <div class="window-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>Listing ID</th>
+                <th>Renter ID</th>
+                <th>Rental Dates</th>
+                <th>Payout</th>
+                <th>Decision Actions</th>
+              </tr>
+            </thead>
+            <tbody id="requestsTbody">
+              <tr><td colspan="6" style="text-align:center; padding: 24px;">Loading booking requests...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 3. MY RENTALS WINDOW (LESSEE RENTALS) -->
+      <section id="winRentals" style="display: none;">
+        <div class="window-header">
+          <div class="window-title">My Rental Bookings</div>
+        </div>
+        <div class="window-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>Listing ID</th>
+                <th>Rental Period</th>
+                <th>Total Cost</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rentalsTbody">
+              <tr><td colspan="6" style="text-align:center; padding: 24px;">Loading rentals...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4. LIVE CHAT WINDOW -->
+      <section id="winChats" style="display: none;">
+        <div class="window-header">
+          <div class="window-title">Live Message Center</div>
+        </div>
+        <div class="chat-window">
+          <div class="chat-sidebar" id="chatRoomsList">
+            <div style="padding: 16px; font-size: 13px; color: var(--text-muted);">Loading conversations...</div>
+          </div>
+          <div class="chat-content">
+            <div class="chat-messages" id="activeChatStream">
+              <div style="margin: auto; color: var(--text-muted); font-size: 13px;">Select a conversation to start chatting</div>
+            </div>
+            <form class="chat-input-bar" id="chatSendForm" style="display: none;">
+              <input type="text" id="chatMessageInput" placeholder="Type a message..." required autocomplete="off" />
+              <button type="submit" class="btn btn-primary btn-sm">Send</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. WISHLIST WINDOW -->
+      <section id="winWishlist" style="display: none;">
+        <div class="window-header">
+          <div class="window-title">Saved Wishlist Equipment</div>
+        </div>
+        <div class="card-grid" id="wishlistGrid">
+          <div style="grid-column: 1 / -1; text-align:center; padding: 24px;">Loading wishlist items...</div>
+        </div>
+      </section>
+
+      <!-- 6. REVIEWS WINDOW -->
+      <section id="winReviews" style="display: none;">
+        <div class="window-header">
+          <div class="window-title">Platform Reviews</div>
+        </div>
+        <div class="window-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Review ID</th>
+                <th>Target Item / User</th>
+                <th>Rating</th>
+                <th>Qualitative Feedback</th>
+              </tr>
+            </thead>
+            <tbody id="reviewsTbody">
+              <tr><td colspan="4" style="text-align:center; padding: 24px;">Loading reviews...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7. NOTIFICATIONS WINDOW -->
+      <section id="winNotifications" style="display: none;">
+        <div class="window-header">
+          <div class="window-title">System & Booking Notifications</div>
+        </div>
+        <div class="window-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Notification ID</th>
+                <th>Alert Event</th>
+                <th>Delivery Channel</th>
+                <th>Dismiss</th>
+              </tr>
+            </thead>
+            <tbody id="notificationsTbody">
+              <tr><td colspan="4" style="text-align:center; padding: 24px;">Loading notifications...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL WINDOW: EDIT LISTING -->
+  <div class="modal-overlay" id="editListingModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 style="font-size: 16px; font-weight: 700;">Edit Listing Window</h3>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('editListingModal')">&times;</button>
+      </div>
+      <form id="editListingForm">
+        <input type="hidden" id="editListingId" />
+        <div class="form-group">
+          <label for="editTitle">Listing Title</label>
+          <input type="text" id="editTitle" required />
+        </div>
+        <div class="form-group">
+          <label for="editCategory">Category</label>
+          <select id="editCategory" required>
+            <option value="electronics">electronics</option>
+            <option value="tools">tools</option>
+            <option value="events">events</option>
+            <option value="outdoor">outdoor</option>
+            <option value="sports">sports</option>
+            <option value="music">music</option>
+            <option value="vehicles">vehicles</option>
+            <option value="appliances">appliances</option>
+            <option value="apparel">apparel</option>
+            <option value="baby">baby</option>
+            <option value="books">books</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="editDailyRate">Daily Rate ($)</label>
+          <input type="number" id="editDailyRate" step="0.01" required />
+        </div>
+        <div class="form-group">
+          <label for="editDeposit">Security Deposit ($)</label>
+          <input type="number" id="editDeposit" step="0.01" required />
+        </div>
+        <div class="form-group">
+          <label for="editDescription">Description</label>
+          <textarea id="editDescription" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="editStatus">Status</label>
+          <select id="editStatus">
+            <option value="Active">Active</option>
+            <option value="Paused">Paused</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:10px;">Save Changes</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL WINDOW: WRITE REVIEW -->
+  <div class="modal-overlay" id="writeReviewModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 style="font-size: 16px; font-weight: 700;">Leave a Review</h3>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('writeReviewModal')">&times;</button>
+      </div>
+      <form id="writeReviewForm">
+        <input type="hidden" id="reviewListingId" />
+        <div class="form-group">
+          <label>Target Listing</label>
+          <input type="text" id="reviewListingDisplay" disabled />
+        </div>
+        <div class="form-group">
+          <label for="reviewScore">Rating (0 to 5 Stars)</label>
+          <select id="reviewScore" required>
+            <option value="5">★★★★★ (5 Stars)</option>
+            <option value="4">★★★★☆ (4 Stars)</option>
+            <option value="3">★★★☆☆ (3 Stars)</option>
+            <option value="2">★★☆☆☆ (2 Stars)</option>
+            <option value="1">★☆☆☆☆ (1 Star)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="reviewText">Qualitative Review / Comment</label>
+          <textarea id="reviewText" rows="3" placeholder="Share your experience renting this item..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:10px;">Submit Review</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL WINDOW: ADVANCED SEARCH -->
+  <div class="modal-overlay" id="searchModal">
+    <div class="modal-box" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3 style="font-size: 16px; font-weight: 700;">Search Rentals Window</h3>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('searchModal')">&times;</button>
+      </div>
+      <form id="advancedSearchForm" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label>Keywords / Item Title</label>
+          <input type="text" id="searchQuery" placeholder="e.g. Sony, Drill, Tent..." />
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="searchCategory">
+            <option value="">All Categories</option>
+            <option value="electronics">electronics</option>
+            <option value="tools">tools</option>
+            <option value="events">events</option>
+            <option value="outdoor">outdoor</option>
+            <option value="sports">sports</option>
+            <option value="music">music</option>
+            <option value="vehicles">vehicles</option>
+            <option value="appliances">appliances</option>
+            <option value="apparel">apparel</option>
+            <option value="baby">baby</option>
+            <option value="books">books</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Sort By</label>
+          <select id="searchSort">
+            <option value="newest">Newest</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="popular">Popular</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Min Daily Rate ($)</label>
+          <input type="number" id="searchMinPrice" placeholder="0" />
+        </div>
+        <div class="form-group">
+          <label>Max Daily Rate ($)</label>
+          <input type="number" id="searchMaxPrice" placeholder="500" />
+        </div>
+        <button type="submit" class="btn btn-primary" style="grid-column: 1 / -1; padding: 10px;">Filter & Find</button>
+      </form>
+      <div id="searchResultsArea" class="card-grid" style="max-height: 280px; overflow-y: auto;"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = window.location.origin.includes(":8000") ? "" : "http://127.0.0.1:8000";
+    const token = localStorage.getItem("access_token");
+    const tokenType = (localStorage.getItem("token_type") || "bearer").replace(/^\w/, c => c.toUpperCase());
+
+    if (!token) window.location.href = "login.html";
+
+    const authHeaders = {
+      "Content-Type": "application/json",
+      "Authorization": `${tokenType} ${token}`
+    };
+
+    function logout() {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("token_type");
+      window.location.href = "login.html";
+    }
+
+    function checkAuthError(res) {
+      if (res.status === 401) { logout(); throw new Error("Session expired."); }
+    }
+
+    function showWindow(name) {
+      const windows = ['listings', 'requests', 'rentals', 'chats', 'wishlist', 'reviews', 'notifications'];
+      windows.forEach(w => {
+        document.getElementById(`win${w.charAt(0).toUpperCase() + w.slice(1)}`).style.display = w === name ? 'block' : 'none';
+      });
+      document.querySelectorAll('.sidebar .nav-item').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('onclick').includes(`'${name}'`));
+      });
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    function openSearchWindow() { openModal('searchModal'); }
+
+    function showAlert(msg, type = "alert-success") {
+      const el = document.getElementById("statusAlert");
+      el.className = `alert ${type}`;
+      el.innerText = msg;
+      el.style.display = "block";
+      setTimeout(() => { el.style.display = "none"; }, 4000);
+    }
+
+    // 1. MY LISTINGS (VIEW, EDIT, DELETE)
+    let myCachedListings = [];
+    async function loadMyListings() {
+      const tbody = document.getElementById("listingsTbody");
+      try {
+        const res = await fetch(`${API_BASE_URL}/listings/my-listings`, { headers: authHeaders });
+        checkAuthError(res);
+        myCachedListings = await res.json();
+        document.getElementById("cntListings").innerText = myCachedListings.length;
+
+        if (myCachedListings.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">No listings posted yet.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = myCachedListings.map(l => `
+          <tr>
+            <td style="font-family:monospace;">${l.listing_id}</td>
+            <td><strong>${l.title}</strong></td>
+            <td>${l.category}</td>
+            <td><strong>$${parseFloat(l.rental_rate_daily || 0).toFixed(2)}</strong></td>
+            <td><span class="status-pill pill-active">${l.status || 'Active'}</span></td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-outline btn-sm" onclick="openEditListing('${l.listing_id}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteListing('${l.listing_id}')">Delete</button>
+                <a href="listing-detail.html?id=${l.listing_id}" class="btn btn-outline btn-sm">Inspect</a>
+              </div>
+            </td>
+          </tr>
+        `).join("");
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">${e.message}</td></tr>`;
+      }
+    }
+
+    function openEditListing(id) {
+      const l = myCachedListings.find(item => item.listing_id === id);
+      if (!l) return;
+      document.getElementById("editListingId").value = l.listing_id;
+      document.getElementById("editTitle").value = l.title || "";
+      document.getElementById("editCategory").value = l.category || "electronics";
+      document.getElementById("editDailyRate").value = l.rental_rate_daily || "";
+      document.getElementById("editDeposit").value = l.security_deposit || "0";
+      document.getElementById("editDescription").value = l.description || "";
+      document.getElementById("editStatus").value = l.status || "Active";
+      openModal("editListingModal");
+    }
+
+    document.getElementById("editListingForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = document.getElementById("editListingId").value;
+      const payload = {
+        title: document.getElementById("editTitle").value.trim(),
+        category: document.getElementById("editCategory").value,
+        rental_rate_daily: parseFloat(document.getElementById("editDailyRate").value),
+        security_deposit: parseFloat(document.getElementById("editDeposit").value),
+        description: document.getElementById("editDescription").value.trim(),
+        status: document.getElementById("editStatus").value
+      };
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/listings/editlisting/${id}`, {
+          method: "PATCH",
+          headers: authHeaders,
+          body: JSON.stringify(payload)
+        });
+        checkAuthError(res);
+        if (!res.ok) throw new Error("Failed to update listing.");
+        closeModal("editListingModal");
+        showAlert("Listing updated successfully!");
+        loadMyListings();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    async function deleteListing(id) {
+      if (!confirm(`Delete listing ${id}? This cannot be undone.`)) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/listings/deletelisting/${id}`, {
+          method: "DELETE",
+          headers: authHeaders
+        });
+        checkAuthError(res);
+        showAlert("Listing deleted successfully!");
+        loadMyListings();
+      } catch (err) {
+        showAlert(err.message, "alert-error");
+      }
+    }
+
+    // 2. BOOKING REQUESTS (ACCEPT / REJECT)
+    async function loadRequests() {
+      const tbody = document.getElementById("requestsTbody");
+      try {
+        const res = await fetch(`${API_BASE_URL}/booking/requests`, { headers: authHeaders });
+        checkAuthError(res);
+        const reqs = await res.json();
+        document.getElementById("cntRequests").innerText = reqs.length;
+
+        if (reqs.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">No pending inquiries to review.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = reqs.map(r => `
+          <tr>
+            <td style="font-family:monospace;">${r.booking_id}</td>
+            <td><a href="listing-detail.html?id=${r.listing_id}" style="color:var(--primary); font-weight:600;">${r.listing_id}</a></td>
+            <td>${r.lessee_id}</td>
+            <td>${new Date(r.start_period).toLocaleDateString()} &rarr; ${new Date(r.end_period).toLocaleDateString()}</td>
+            <td><strong>$${parseFloat(r.rental_cost || 0).toFixed(2)}</strong></td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-success btn-sm" onclick="respondBooking('${r.booking_id}', 'accept')">Accept</button>
+                <button class="btn btn-danger btn-sm" onclick="respondBooking('${r.booking_id}', 'reject')">Reject</button>
+              </div>
+            </td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">${err.message}</td></tr>`;
+      }
+    }
+
+    async function respondBooking(id, action) {
+      const method = action === 'accept' ? 'PATCH' : 'DELETE';
+      try {
+        const res = await fetch(`${API_BASE_URL}/booking/${id}/${action}`, {
+          method: method,
+          headers: authHeaders
+        });
+        checkAuthError(res);
+        showAlert(`Booking ${id} ${action}ed!`);
+        loadRequests();
+      } catch (e) {
+        showAlert(e.message, "alert-error");
+      }
+    }
+
+    // 3. MY RENTALS (VIEW & WRITE REVIEW)
+    async function loadRentals() {
+      const tbody = document.getElementById("rentalsTbody");
+      try {
+        const res = await fetch(`${API_BASE_URL}/booking/my-rentals`, { headers: authHeaders });
+        checkAuthError(res);
+        const rentals = await res.json();
+        document.getElementById("cntRentals").innerText = rentals.length;
+
+        if (rentals.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">You haven't rented any equipment.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = rentals.map(b => `
+          <tr>
+            <td style="font-family:monospace;">${b.booking_id}</td>
+            <td><a href="listing-detail.html?id=${b.listing_id}" style="color:var(--primary); font-weight:600;">${b.listing_id}</a></td>
+            <td>${new Date(b.start_period).toLocaleDateString()} &rarr; ${new Date(b.end_period).toLocaleDateString()}</td>
+            <td><strong>$${parseFloat(b.rental_cost || 0).toFixed(2)}</strong></td>
+            <td><span class="status-pill pill-active">${b.booking_status}</span></td>
+            <td>
+              <button class="btn btn-outline btn-sm" onclick="openWriteReview('${b.listing_id}')">Write Review</button>
+            </td>
+          </tr>
+        `).join("");
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">${e.message}</td></tr>`;
+      }
+    }
+
+    function openWriteReview(listingId) {
+      document.getElementById("reviewListingId").value = listingId;
+      document.getElementById("reviewListingDisplay").value = listingId;
+      openModal("writeReviewModal");
+    }
+
+    document.getElementById("writeReviewForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        target_listing_id: document.getElementById("reviewListingId").value,
+        rating_score: parseInt(document.getElementById("reviewScore").value),
+        qualitative_review: document.getElementById("reviewText").value.trim()
+      };
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/review/create`, {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify(payload)
+        });
+        checkAuthError(res);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Unable to submit review.");
+        closeModal("writeReviewModal");
+        showAlert("Review submitted successfully!");
+        loadReviews();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    // 4. LIVE CHATS WINDOW (THREAD SELECTION & DIRECT SENDING)
+    let activeConvId = null;
+    let chatInterval = null;
+
+    async function loadChats() {
+      const sidebar = document.getElementById("chatRoomsList");
+      try {
+        let res = await fetch(`${API_BASE_URL}/conv/`, { headers: authHeaders });
+        if (res.status === 404) res = await fetch(`${API_BASE_URL}/user/conversations`, { headers: authHeaders });
+        checkAuthError(res);
+        const chats = await res.json();
+        document.getElementById("cntChats").innerText = chats.length;
+
+        if (chats.length === 0) {
+          sidebar.innerHTML = `<div style="padding: 16px; font-size:13px; color:var(--text-muted);">No message threads.</div>`;
+          return;
+        }
+
+        sidebar.innerHTML = chats.map(c => `
+          <div class="chat-room-item ${c.conversation_id === activeConvId ? 'active' : ''}" onclick="selectChatRoom('${c.conversation_id}')">
+            <div style="font-weight: 700; font-size: 13.5px;">${c.listing_id ? `Listing: ${c.listing_id}` : 'General Chat'}</div>
+            <div style="font-size: 11px; color: var(--text-muted);">ID: ${c.conversation_id}</div>
+          </div>
+        `).join("");
+      } catch (e) {
+        sidebar.innerHTML = `<div style="padding: 16px;">${e.message}</div>`;
+      }
+    }
+
+    function selectChatRoom(id) {
+      activeConvId = id;
+      loadChats();
+      document.getElementById("chatSendForm").style.display = "flex";
+      renderMessages(id);
+      if (chatInterval) clearInterval(chatInterval);
+      chatInterval = setInterval(() => renderMessages(id), 3000);
+    }
+
+    async function renderMessages(id) {
+      const stream = document.getElementById("activeChatStream");
+      try {
+        let res = await fetch(`${API_BASE_URL}/conv/${id}/messages`, { headers: authHeaders });
+        if (res.status === 404) res = await fetch(`${API_BASE_URL}/user/conversations/${id}/messages`, { headers: authHeaders });
+        const messages = await res.json();
+
+        if (!messages || messages.length === 0) {
+          stream.innerHTML = `<div style="margin: auto; color: var(--text-muted); font-size: 13px;">No messages in this chat yet.</div>`;
+          return;
+        }
+
+        // Get my user id to determine bubble direction
+        let myId = localStorage.getItem("current_user_id");
+        if (!myId) {
+          const uRes = await fetch(`${API_BASE_URL}/user/me`, { headers: authHeaders });
+          if (uRes.ok) { myId = await uRes.json(); localStorage.setItem("current_user_id", myId); }
+        }
+
+        stream.innerHTML = messages.map(m => `
+          <div class="chat-msg ${m.sender_id === myId ? 'me' : 'them'}">
+            ${escapeHtml(m.content)}
+          </div>
+        `).join("");
+        stream.scrollTop = stream.scrollHeight;
+      } catch (e) {
+        // Soft fail
+      }
+    }
+
+    document.getElementById("chatSendForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!activeConvId) return;
+      const input = document.getElementById("chatMessageInput");
+      const text = input.value.trim();
+      if (!text) return;
+
+      try {
+        let res = await fetch(`${API_BASE_URL}/conv/${activeConvId}/messages`, {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify({ content: text })
+        });
+        if (res.status === 404) {
+          res = await fetch(`${API_BASE_URL}/user/conversations/${activeConvId}/messages`, {
+            method: "POST",
+            headers: authHeaders,
+            body: JSON.stringify({ content: text })
+          });
+        }
+        input.value = "";
+        renderMessages(activeConvId);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    // 5. WISHLIST WINDOW (CARDS WITH REMOVAL ACTION)
+    async function loadWishlist() {
+      const grid = document.getElementById("wishlistGrid");
+      try {
+        const res = await fetch(`${API_BASE_URL}/user/wishlist`, { headers: authHeaders });
+        checkAuthError(res);
+        const items = await res.json();
+        document.getElementById("cntWishlist").innerText = items.length;
+
+        if (items.length === 0) {
+          grid.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding: 24px; color:var(--text-muted);">Your wishlist is empty.</div>`;
+          return;
+        }
+
+        grid.innerHTML = items.map(w => `
+          <div class="item-card">
+            <div class="item-card-body">
+              <span style="font-size: 11px; color: var(--text-muted);">Wishlist ID: ${w.wishlist_id}</span>
+              <strong style="font-size: 15px;">Item ID: ${w.listing_id}</strong>
+              <div style="display:flex; gap:6px; margin-top: 14px;">
+                <a href="listing-detail.html?id=${w.listing_id}" class="btn btn-primary btn-sm" style="flex:1;">Rent</a>
+                <button class="btn btn-danger btn-sm" onclick="removeWishlistItem('${w.listing_id}')">Remove</button>
+              </div>
+            </div>
+          </div>
+        `).join("");
+      } catch (e) {
+        grid.innerHTML = `<div>${e.message}</div>`;
+      }
+    }
+
+    async function removeWishlistItem(listingId) {
+      if (!confirm("Remove item from wishlist?")) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/user/wishlist/${listingId}`, {
+          method: "DELETE",
+          headers: authHeaders
+        });
+        checkAuthError(res);
+        showAlert("Removed from wishlist.");
+        loadWishlist();
+      } catch (e) {
+        showAlert(e.message, "alert-error");
+      }
+    }
+
+    // 6. REVIEWS WINDOW
+    async function loadReviews() {
+      const tbody = document.getElementById("reviewsTbody");
+      try {
+        const res = await fetch(`${API_BASE_URL}/review/my-reviews`, { headers: authHeaders });
+        checkAuthError(res);
+        const reviews = await res.json();
+        document.getElementById("cntReviews").innerText = reviews.length;
+
+        if (reviews.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">No reviews recorded yet.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = reviews.map(r => `
+          <tr>
+            <td style="font-family:monospace;">${r.review_id}</td>
+            <td>${r.target_listing_id ? `Listing: ${r.target_listing_id}` : `User: ${r.target_user_id}`}</td>
+            <td><strong style="color:var(--warning);">${"★".repeat(r.rating_score || 5)}</strong> (${r.rating_score}/5)</td>
+            <td>${r.qualitative_review || 'No written comment'}</td>
+          </tr>
+        `).join("");
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">${e.message}</td></tr>`;
+      }
+    }
+
+    // 7. NOTIFICATIONS WINDOW (DISMISS ACTION)
+    async function loadNotifications() {
+      const tbody = document.getElementById("notificationsTbody");
+      try {
+        const res = await fetch(`${API_BASE_URL}/notification/get`, { headers: authHeaders });
+        checkAuthError(res);
+        const notifs = await res.json();
+        document.getElementById("cntNotifications").innerText = notifs.length;
+
+        if (notifs.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">No notifications.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = notifs.map(n => `
+          <tr>
+            <td style="font-family:monospace;">${n.notification_id}</td>
+            <td><strong>${n.type}</strong></td>
+            <td><span class="status-pill pill-pending">${n.delivery_method}</span></td>
+            <td><button class="btn btn-outline btn-sm" onclick="dismissNotif('${n.notification_id}')">Dismiss</button></td>
+          </tr>
+        `).join("");
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">${e.message}</td></tr>`;
+      }
+    }
+
+    async function dismissNotif(id) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/notification/${id}`, {
+          method: "DELETE",
+          headers: authHeaders
+        });
+        checkAuthError(res);
+        loadNotifications();
+      } catch (e) {
+        showAlert(e.message, "alert-error");
+      }
+    }
+
+    // 8. ADVANCED SEARCH MODAL & QUERY EXECUTION
+    document.getElementById("advancedSearchForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const area = document.getElementById("searchResultsArea");
+      area.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding: 14px;">Searching platform...</div>`;
+
+      const params = new URLSearchParams();
+      const q = document.getElementById("searchQuery").value.trim();
+      const cat = document.getElementById("searchCategory").value;
+      const sort = document.getElementById("searchSort").value;
+      const min = document.getElementById("searchMinPrice").value;
+      const max = document.getElementById("searchMaxPrice").value;
+
+      if (q) params.append("query", q);
+      if (cat) params.append("category", cat);
+      if (sort) params.append("sort_by", sort);
+      if (min) params.append("min_price", min);
+      if (max) params.append("max_price", max);
+
+      try {
+        let res = await fetch(`${API_BASE_URL}/search/listings?${params.toString()}`);
+        if (res.status === 404) res = await fetch(`${API_BASE_URL}/user/listings?${params.toString()}`);
+        const results = await res.json();
+
+        if (!results || results.length === 0) {
+          area.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding: 14px;">No matching rentals found.</div>`;
+          return;
+        }
+
+        area.innerHTML = results.map(item => `
+          <div class="item-card">
+            <div class="item-card-body">
+              <span style="font-size: 11px; color: var(--primary); font-weight:700; text-transform:uppercase;">${item.category || 'General'}</span>
+              <strong style="font-size: 14px;">${item.title}</strong>
+              <div style="font-size: 12px; color: var(--text-muted);">$${parseFloat(item.rental_rate_daily || 0).toFixed(2)}/day</div>
+              <a href="listing-detail.html?id=${item.listing_id}" class="btn btn-primary btn-sm" style="margin-top: 6px;">Rent Now</a>
+            </div>
+          </div>
+        `).join("");
+      } catch (err) {
+        area.innerHTML = `<div style="color:var(--danger);">${err.message}</div>`;
+      }
+    });
+
+    function escapeHtml(text) {
+      const d = document.createElement("div");
+      d.innerText = text;
+      return d.innerHTML;
+    }
+
+    // Initialize all workspace windows concurrently
+    loadMyListings();
+    loadRequests();
+    loadRentals();
+    loadChats();
+    loadWishlist();
+    loadReviews();
+    loadNotifications();
+  </script>
+</body>
+</html>

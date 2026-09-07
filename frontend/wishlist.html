@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Wishlist - RentHub</title>
+  <style>
+    :root {
+      --primary: #0066ff;
+      --primary-hover: #0052cc;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+
+    .btn-outline { border-color: var(--border); background: transparent; color: var(--text-main); }
+    .btn-outline:hover { background: #f1f5f9; }
+
+    .btn-danger-outline {
+      border-color: #fca5a5;
+      background: transparent;
+      color: var(--danger);
+    }
+    .btn-danger-outline:hover {
+      background: #fee2e2;
+    }
+
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    main {
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 0 24px;
+      width: 100%;
+      flex: 1;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .page-header h1 {
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .items-count {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08);
+    }
+
+    .card-img-container {
+      width: 100%;
+      height: 190px;
+      background: #e2e8f0;
+      position: relative;
+    }
+
+    .card-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .card-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .card-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-location {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    .card-footer {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    .price-tag {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .price-tag span {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--text-muted);
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .state-msg {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      grid-column: 1 / -1;
+    }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .alert-error { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .alert-success { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="brand">📦 RentHub</a>
+      <div class="nav-actions">
+        <a href="index.html" class="btn btn-outline">Browse Catalog</a>
+        <a href="dashboard.html" class="btn btn-outline">Dashboard</a>
+        <a href="profile.html" class="btn btn-outline">Profile</a>
+        <button class="btn btn-outline" onclick="logout()">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="statusAlert" class="alert"></div>
+
+    <div class="page-header">
+      <h1>Saved Items</h1>
+      <span class="items-count" id="itemsCount">Loading saved rentals...</span>
+    </div>
+
+    <div class="grid" id="wishlistGrid">
+      <div class="state-msg">Loading your saved items...</div>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE_URL = "http://127.0.0.1:8000";
+
+    // 1. Strict JWT Session Authentication Verification
+    const token = localStorage.getItem("access_token");
+    const rawTokenType = localStorage.getItem("token_type") || "bearer";
+    const tokenType = rawTokenType.charAt(0).toUpperCase() + rawTokenType.slice(1).toLowerCase();
+
+    if (!token) {
+      window.location.href = "login.html";
+    }
+
+    const authHeaders = {
+      "Content-Type": "application/json",
+      "Authorization": `${tokenType} ${token}`
+    };
+
+    function logout() {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("token_type");
+      window.location.href = "login.html";
+    }
+
+    function checkAuthError(res) {
+      if (res.status === 401) {
+        logout();
+        throw new Error("Your session has expired. Redirecting to login...");
+      }
+    }
+
+    // 2. Fetch Wishlist Items
+    async function loadWishlist() {
+      const grid = document.getElementById("wishlistGrid");
+      const counter = document.getElementById("itemsCount");
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/wishlist/`, { headers: authHeaders });
+        checkAuthError(res);
+
+        if (!res.ok) {
+          throw new Error("Unable to retrieve wishlist items.");
+        }
+
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : (data.items || []);
+
+        counter.innerText = `${items.length} saved item${items.length === 1 ? '' : 's'}`;
+        renderWishlist(items);
+      } catch (err) {
+        grid.innerHTML = `<div class="state-msg">${err.message}</div>`;
+        counter.innerText = "0 items";
+      }
+    }
+
+    // 3. Render Cards
+    function renderWishlist(list) {
+      const grid = document.getElementById("wishlistGrid");
+
+      if (list.length === 0) {
+        grid.innerHTML = `
+          <div class="state-msg">
+            <p style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Your wishlist is empty.</p>
+            <p>Save items you are interested in renting later to keep track of them here.</p>
+            <a href="index.html" class="btn btn-primary" style="margin-top: 16px;">Explore Catalog</a>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = list.map(item => {
+        // Handles both transformed response models and raw joined schemas
+        const listing = item.listing || item;
+        const targetId = item.listing_id || listing.listing_id || item.id;
+        const removeId = item.wishlist_id || targetId;
+
+        const img = listing.primary_image || (listing.images && listing.images[0]?.image_file_url) || "https://images.unsplash.com/photo-1581235720704-06d3acfcb36f?w=600&auto=format&fit=crop&q=80";
+        const title = listing.title || "Rental Listing";
+        const category = listing.category || "General";
+        const location = listing.geo_location || "Location on request";
+        const rate = listing.rental_rate_daily ? `$${parseFloat(listing.rental_rate_daily).toFixed(2)}` : "$--";
+
+        return `
+          <div class="card" id="card-${removeId}">
+            <div class="card-img-container">
+              <span class="card-badge">${category}</span>
+              <img class="card-img" src="${img}" alt="${title}" onerror="this.src='https://images.unsplash.com/photo-1581235720704-06d3acfcb36f?w=600&auto=format&fit=crop&q=80'" />
+            </div>
+            <div class="card-body">
+              <div class="card-title" title="${title}">${title}</div>
+              <div class="card-location">📍 ${location}</div>
+              <div class="card-footer">
+                <div class="price-tag">${rate} <span>/ day</span></div>
+                <div class="card-actions">
+                  <button class="btn btn-danger-outline btn-sm" onclick="removeFromWishlist('${removeId}', '${targetId}')">Remove</button>
+                  <a href="listing-detail.html?id=${targetId}" class="btn btn-primary btn-sm">Rent</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // 4. Remove Item from Wishlist
+    async function removeFromWishlist(id, fallbackTargetId) {
+      if (!confirm("Remove this item from your saved wishlist?")) return;
+
+      try {
+        let res = await fetch(`${API_BASE_URL}/wishlist/${id}`, {
+          method: "DELETE",
+          headers: authHeaders
+        });
+
+        // Fallback for route variations that accept listing_id instead of wishlist primary key
+        if (res.status === 404 && fallbackTargetId && fallbackTargetId !== id) {
+          res = await fetch(`${API_BASE_URL}/wishlist/${fallbackTargetId}`, {
+            method: "DELETE",
+            headers: authHeaders
+          });
+        }
+
+        checkAuthError(res);
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || "Failed to remove item from wishlist.");
+        }
+
+        showAlert("Item removed from your wishlist.", "alert-success");
+        loadWishlist();
+      } catch (err) {
+        showAlert(err.message, "alert-error");
+      }
+    }
+
+    function showAlert(msg, className) {
+      const box = document.getElementById("statusAlert");
+      box.className = `alert ${className}`;
+      box.innerText = msg;
+      box.style.display = "block";
+      setTimeout(() => { box.style.display = "none"; }, 3500);
+    }
+
+    loadWishlist();
+  </script>
+</body>
+</html>

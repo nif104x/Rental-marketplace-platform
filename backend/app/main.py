@@ -39,7 +39,22 @@ app.include_router(wishlist.router)
 app.include_router(login.router)
 
 
-# app.mount("/images", StaticFiles(directory="../frontend/images"), name="images")
+
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
+# Path: backend/app/uploads
+APP_DIR = Path(__file__).resolve().parent
+UPLOAD_DIR = APP_DIR / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# 1. Mount /uploads FIRST
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+# 2. Mount / (frontend) LAST
+FRONTEND_DIR = APP_DIR.parent.parent / "frontend"
+if FRONTEND_DIR.exists():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
 
 @app.get("/")
 def home():
@@ -50,3 +65,10 @@ def db_test():
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
     return {"database": "connected"}
+
+
+from fastapi.responses import RedirectResponse
+
+@app.get("/dashboard")
+def redirect_to_dashboard_html():
+    return RedirectResponse(url="/dashboard.html")
