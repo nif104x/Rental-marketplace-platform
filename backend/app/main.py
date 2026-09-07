@@ -2,15 +2,14 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
 
-from backend.app.routes import wishlist
 from backend.app.db import engine
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.routes import admin, booking, conversation, listings, login, notification, report, review, search, user
+from backend.app.routes import admin, booking, conversation, listings, login, notification, report, review, search, user, wishlist
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-UPLOAD_DIR = BASE_DIR / "uploads"
+UPLOAD_DIR = Path(__file__).parent / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 app = FastAPI()
 
@@ -25,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 app.include_router(admin.router)
 app.include_router(booking.router)
